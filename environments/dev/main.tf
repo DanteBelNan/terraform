@@ -1,6 +1,9 @@
+# environments/dev/main.tf
+
+# 1. Definición del ECR
 module "ecr" {
   source   = "../../modules/ecr"
-  app_name = var.app_name # Pasa la variable a este módulo
+  app_name = var.app_name 
 }
 
 # 2. Definición del Servidor (EC2, EIP, SG)
