@@ -11,4 +11,6 @@ module "compute_server" {
   source          = "../../../modules/compute"
   app_name        = var.app_name
   instance_type   = var.instance_type
+  github_repo_url = var.github_repo_url
+  build_command   = var.build_command 
 }
