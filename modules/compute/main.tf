@@ -44,7 +44,7 @@ resource "aws_security_group" "app_sg" {
 
 # Recurso: Instancia EC2
 resource "aws_instance" "app_server" {
-  ami           = "ami-0b1a0e980a3a7042a"
+  ami           = data.aws_ami.ubuntu_latest.id
   instance_type = var.instance_type
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]

@@ -1,6 +1,6 @@
 # Recurso: Repositorio ECR
 resource "aws_ecr_repository" "app_repo" {
-  name                 = "${var.app_name}-repo"
+  name                 = "${lower(var.app_name)}-repo"
 
   image_tag_mutability = "MUTABLE"
 
