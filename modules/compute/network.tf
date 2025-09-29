@@ -1,6 +1,6 @@
 # Recurso: Elastic IP (EIP)
 resource "aws_eip" "app_eip" {
-  vpc = true # Provisiona la EIP para ser usada en una VPC
+  domain = true
   tags = {
     Name = "${var.app_name}-EIP"
   }
