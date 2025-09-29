@@ -47,52 +47,59 @@ resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu_latest.id
   instance_type = var.instance_type
   
-  # ASOCIACIÓN OFICIAL DE LA KEY PAIR DE AWS PARA LOGIN SSH (Punto 1 resuelto)
-  key_name      = "terraform-key" 
+  key_name      = "terraform-key" # Usamos la Key Pair de AWS para SSH
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-
-  # Asocia la EIP a la instancia
   associate_public_ip_address = true
 
   user_data = <<-EOF
               #!/bin/bash
 
               # Variables de Entrada de Terraform
-              GITHUB_SSH_PUB_KEY="${data.local_file.ssh_public_key.content}"
+              # Ya no necesitamos GITHUB_SSH_PUB_KEY ni la inyección de authorized_keys 
+              # si usamos el key_name de AWS para login y HTTPS para Git Clone.
+              # Mantenemos las variables de Git y Build
               REPO_URL="${var.github_repo_url}"
               BUILD_CMD="${var.build_command}"
               USER="ubuntu"
               REPO_DIR="/home/$USER/app_repo"
               
-              # 1. Configuración Inicial (APT, Docker, Git, Compose Plugin)
+              # 1. Configuración Inicial (APT, Docker, Git, Compose Plugin) - CORREGIDO
+              echo "Iniciando actualización e instalación de dependencias..."
               sudo apt update -y
-              sudo apt install -y docker.io awscli git docker-compose-plugin
-              sudo usermod -aG docker ubuntu 
+              
+              # Instalación de Docker, Git, AWS CLI
+              sudo apt install -y docker.io awscli git 
+              # Instalación del plugin de Docker Compose (comando correcto para 22.04)
+              sudo apt install -y docker-compose-plugin 
+
+              # Iniciar Docker y agregar el usuario 'ubuntu' al grupo 'docker'
               sudo systemctl start docker
               sudo systemctl enable docker
-
-              # 2. Inyección de Clave SSH para GitHub (La clave privada del Host de Terraform)
-              mkdir -p /home/$USER/.ssh
+              sudo usermod -aG docker $USER
               
-              echo "$GITHUB_SSH_PUB_KEY" >> /home/$USER/.ssh/authorized_keys
-              chmod 700 /home/$USER/.ssh
-              chmod 600 /home/$USER/.ssh/authorized_keys
-              chown -R $USER:$USER /home/$USER/.ssh
+              # 2. Inyección de Clave SSH para Acceso a la Instancia
+              # MANTENER: Aunque usamos key_name, dejamos la inyección de la clave pública
+              # del host de Terraform para mantener la compatibilidad con tu flujo de trabajo previo.
+              # NOTA: En este punto, no es crucial, pero previene problemas si el usuario cambia el método.
+              # Si cambiaste a HTTPS, esta sección no afecta el Git Clone, ¡pero mantenemos la compatibilidad!
+              # Para simplificar MÁS, podríamos borrar la sección 2 completa, pero la dejaremos por ahora.
+              # MODO SEGURO: Borramos la inyección, ya que el login es con key_name.
               
               # 3. Clonación de GitHub y Ejecución del Build (Docker Compose)
               
               echo "Iniciando clonación de repositorio: $REPO_URL"
               
               # Clonar y construir como el usuario 'ubuntu'
-              # Git intentará usar la clave que está en el home del usuario ubuntu
+              # Si la URL es HTTPS, clonará sin pedir clave SSH.
               sudo -u $USER git clone "$REPO_URL" "$REPO_DIR"
               
               if [ -d "$REPO_DIR" ]; then
                 echo "Clonación exitosa. Iniciando build con Docker Compose..."
                 cd "$REPO_DIR"
                 
-                # Ejecutar el comando de build
+                # Ejecutar el comando de build (usando sudo -u $USER para permisos correctos)
+                # El usuario 'ubuntu' ya está en el grupo 'docker'
                 sudo -u $USER sh -c "$BUILD_CMD"
                 
                 if [ $? -eq 0 ]; then
@@ -108,6 +115,7 @@ resource "aws_instance" "app_server" {
   tags = {
     Name = "${var.app_name}-Server"
   }
+}
 }
 
 # Asociación de la EIP 
