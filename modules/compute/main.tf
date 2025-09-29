@@ -46,6 +46,9 @@ resource "aws_security_group" "app_sg" {
 resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu_latest.id
   instance_type = var.instance_type
+  
+  # ASOCIACIÓN OFICIAL DE LA KEY PAIR DE AWS PARA LOGIN SSH (Punto 1 resuelto)
+  key_name      = "terraform-key" 
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
 
@@ -64,13 +67,14 @@ resource "aws_instance" "app_server" {
               
               # 1. Configuración Inicial (APT, Docker, Git, Compose Plugin)
               sudo apt update -y
-              sudo apt install -y docker.io awscli git docker-compose-plugin # Agregamos el plugin de Compose
+              sudo apt install -y docker.io awscli git docker-compose-plugin
               sudo usermod -aG docker ubuntu 
               sudo systemctl start docker
               sudo systemctl enable docker
 
-              # 2. Inyección de Clave SSH para Acceso a la Instancia
+              # 2. Inyección de Clave SSH para GitHub (La clave privada del Host de Terraform)
               mkdir -p /home/$USER/.ssh
+              
               echo "$GITHUB_SSH_PUB_KEY" >> /home/$USER/.ssh/authorized_keys
               chmod 700 /home/$USER/.ssh
               chmod 600 /home/$USER/.ssh/authorized_keys
@@ -78,17 +82,17 @@ resource "aws_instance" "app_server" {
               
               # 3. Clonación de GitHub y Ejecución del Build (Docker Compose)
               
-              # Establece el contexto al usuario ubuntu para permisos de clave SSH
               echo "Iniciando clonación de repositorio: $REPO_URL"
               
               # Clonar y construir como el usuario 'ubuntu'
+              # Git intentará usar la clave que está en el home del usuario ubuntu
               sudo -u $USER git clone "$REPO_URL" "$REPO_DIR"
               
               if [ -d "$REPO_DIR" ]; then
                 echo "Clonación exitosa. Iniciando build con Docker Compose..."
                 cd "$REPO_DIR"
                 
-                # Ejecutar el comando de build (docker compose up -d --build por defecto)
+                # Ejecutar el comando de build
                 sudo -u $USER sh -c "$BUILD_CMD"
                 
                 if [ $? -eq 0 ]; then
