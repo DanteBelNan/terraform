@@ -7,17 +7,6 @@ terraform {
     }
   }
 
-  # Configuración del Backend para almacenamiento remoto del estado
-  backend "s3" {
-    # Cambia este valor por un nombre de bucket globalmente único
-    bucket         = "dbeltran-bucket-unic" 
-    key            = "dev/base_infra/terraform.tfstate"
-    region         = "us-east-1"
-    
-    # Nombre de la tabla de DynamoDB (para state locking)
-    dynamodb_table = "terraform-state-locks" 
-    encrypt        = true
-  }
 }
 
 # Configuración del proveedor
