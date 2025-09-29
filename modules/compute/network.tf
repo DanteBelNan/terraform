@@ -35,18 +35,43 @@ resource "aws_security_group" "app_sg" {
 
 # Recurso: Instancia EC2
 resource "aws_instance" "app_server" {
-  ami           = "ami-053b0a5351a2d8a0c" # ID de una AMI de Ubuntu 22.04 LTS (busca la actual en tu región)
+  ami           = "ami-053b0a5351a2d8a0c" 
   instance_type = var.instance_type
-  key_name      = var.key_pair_name
+
   vpc_security_group_ids = [aws_security_group.app_sg.id]
 
   # Asocia la EIP a la instancia
   associate_public_ip_address = true
-  
+
+  user_data = <<-EOF
+              #!/bin/bash
+
+              # Leemos la clave desde el data source
+              GITHUB_SSH_PUB_KEY="${data.local_file.ssh_public_key.content}"
+              USER="ubuntu"
+
+              # Rutina de inyección de clave
+              mkdir -p /home/$USER/.ssh
+              echo "$GITHUB_SSH_PUB_KEY" >> /home/$USER/.ssh/authorized_keys
+              chmod 700 /home/$USER/.ssh
+              chmod 600 /home/$USER/.ssh/authorized_keys
+              chown -R $USER:$USER /home/$USER/.ssh
+
+              # Instalación de software esencial
+              sudo apt update -y
+              sudo apt install -y docker.io awscli git
+              sudo usermod -aG docker ubuntu 
+              sudo systemctl start docker
+              sudo systemctl enable docker
+
+              echo "Instancia configurada y clave SSH inyectada."
+              EOF
+
   tags = {
     Name = "${var.app_name}-Server"
   }
 }
+
 
 # Asociación de la EIP (aunque EC2 ya tiene IP pública, esta garantiza que sea fija)
 resource "aws_eip_association" "eip_assoc" {
