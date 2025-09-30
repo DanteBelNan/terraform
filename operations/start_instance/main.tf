@@ -1,9 +1,9 @@
-# --- 1. Configuración del Proveedor AWS ---
+# --- 1. AWS Provider Configuration ---
 provider "aws" {
   region = var.aws_region 
 }
 
-# --- 2. Data Source para Encontrar la Instancia Existente ---
+# --- 2. Data Source to Find the Existing Instance (Stopped) ---
 data "aws_instance" "app_server_to_start" {
   filter {
     name   = "tag:Name"
@@ -15,23 +15,25 @@ data "aws_instance" "app_server_to_start" {
   }
 }
 
-# --- 3. Recurso Nulo para Iniciar la Instancia ---
+# --- 3. Null Resource to Start the Instance ---
 resource "null_resource" "start_ec2_instance" {
   
-  # Forzar la ejecución del comando en cada apply para iniciar la instancia.
+  # Force command execution on every apply to start the instance.
   triggers = {
     timestamp = timestamp() 
   }
 
   provisioner "local-exec" {
+    # Calls the AWS CLI to start the instance using its ID and region.
     command = "aws ec2 start-instances --instance-ids ${data.aws_instance.app_server_to_start.id} --region ${var.aws_region}"
   }
   
+  # Ensures data source is resolved before attempting to run the command.
   depends_on = [data.aws_instance.app_server_to_start]
 }
 
-# --- 4. Salida ---
+# --- 4. Output ---
 output "instance_id_started" {
   value       = data.aws_instance.app_server_to_start.id
-  description = "ID de la instancia que se inició."
+  description = "ID of the instance that was started."
 }
