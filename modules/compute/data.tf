@@ -1,16 +1,17 @@
+# 1. Data Source for Local SSH Public Key (Optional: for adding to instance)
 data "local_file" "ssh_public_key" {
   filename = "/home/ubuntu/.ssh/id_rsa.pub"
 }
 
-# 2. Data Source para la AMI de Ubuntu más reciente
+# 2. Data Source for the Latest Ubuntu AMI
 data "aws_ami" "ubuntu_latest" {
-  # Solo buscamos la AMI que esté disponible y activa
+  # Only search for the latest available AMI
   most_recent = true 
 
-  # Filtros para Ubuntu 22.04 LTS (Jammy)
+  # Filters for Ubuntu 22.04 LTS (Jammy)
   filter {
     name   = "name"
-    # El nombre de Canonical (Ubuntu) en us-east-2.
+    # Canonical's name in us-east-2.
     values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
   }
 
@@ -19,6 +20,6 @@ data "aws_ami" "ubuntu_latest" {
     values = ["hvm"]
   }
 
-  # El dueño de las AMIs oficiales de Ubuntu es Canonical
+  # Owner ID for official Ubuntu AMIs (Canonical)
   owners = ["099720109477"] 
 }

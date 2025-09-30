@@ -1,19 +1,19 @@
 variable "app_name" {
-  description = "Nombre base de la aplicación y prefijo para los recursos"
+  description = "Base application name and prefix for all resources."
   type        = string
 }
 
 variable "instance_type" {
-  description = "El tipo de instancia EC2 para el servidor"
+  description = "The EC2 instance type for the server."
   type        = string
 }
 
 variable "github_repo_url" {
-  description = "URL SSH del repositorio de GitHub a clonar"
+  description = "HTTPS URL of the GitHub repository to clone."
   type        = string
 }
 
 variable "build_command" {
-  description = "Comando CLI para construir y levantar la aplicación"
+  description = "CLI command to build and launch the application (e.g., docker compose up -d)."
   type        = string
 }
