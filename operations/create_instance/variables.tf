@@ -1,53 +1,54 @@
 variable "app_name" {
-  description = "Nombre de la aplicación y prefijo para todos los recursos."
+  description = "Application name and prefix for all resources."
   type        = string
 }
 
-# --- Variables de GitHub (Leídas del entorno TF_VAR_) ---
+# --- GitHub Variables (Read from TF_VAR_ environment) ---
 
 variable "github_token" {
-  description = "Token de Acceso Personal (PAT) de GitHub con scope 'repo' para crear repositorios."
+  description = "GitHub Personal Access Token (PAT) with 'repo' and 'workflow' scopes."
   type        = string
   sensitive   = true 
 }
 
 variable "github_owner" {
-  description = "Nombre de la organización o usuario de GitHub donde se creará el repositorio. (Ej. DanteBelNan)"
+  description = "The GitHub organization or user where the repository will be created. (E.g., DanteBelNan)"
   type        = string
 }
 
 variable "repo_template" {
-  description = "Nombre completo del repositorio de plantilla (owner/repo-name). Ej: DanteBelNan/node_postgres."
+  description = "Full name of the template repository (owner/repo-name). E.g., DanteBelNan/node_template."
   type        = string
   validation {
-    condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template) #Diferentes templates
-    error_message = "El valor para repo_template debe ser una de las opciones válidas: 'DanteBelNan/node_postgres' o 'DanteBelNan/play_chat'."
+    # CORRECTED VALIDATION MESSAGE to match the 'condition'
+    condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template) 
+    error_message = "The value for repo_template must be one of the valid options: 'DanteBelNan/node_template' or 'DanteBelNan/html_template'."
   }
 }
 
-# --- Variables de Compute ---
+# --- AWS Compute Variables ---
 
 variable "instance_type" {
-  description = "Tipo de instancia EC2 a lanzar."
+  description = "The EC2 instance type to launch."
   type        = string
   default     = "t3.small" 
 }
 
 variable "build_command" {
-  description = "Comando de Docker Compose a ejecutar en la instancia."
+  description = "Docker Compose CLI command to execute on the instance."
   type        = string
   default     = "docker compose up -d --build"
 }
 
-# --- Variables de AWS acces key ---
+# --- AWS Access Keys for GitHub Secrets ---
 variable "aws_access_key_id" {
-  description = "Access Key ID para autenticación de AWS (para GitHub Actions)."
+  description = "AWS Access Key ID for authentication (used for GitHub Actions Secrets)."
   type        = string
   sensitive   = true 
 }
 
 variable "aws_secret_access_key" {
-  description = "Secret Access Key para autenticación de AWS (para GitHub Actions)."
+  description = "AWS Secret Access Key for authentication (used for GitHub Actions Secrets)."
   type        = string
   sensitive   = true 
 }
