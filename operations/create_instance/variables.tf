@@ -20,7 +20,7 @@ variable "repo_template" {
   description = "Nombre completo del repositorio de plantilla (owner/repo-name). Ej: DanteBelNan/node_postgres."
   type        = string
   validation {
-    condition     = contains(["DanteBelNan/node_postgres", "DanteBelNan/play_chat"], var.repo_template) #Diferentes templates
+    condition     = contains(["DanteBelNan/node_postgres_template", "DanteBelNan/otroTemplate"], var.repo_template) #Diferentes templates
     error_message = "El valor para repo_template debe ser una de las opciones válidas: 'DanteBelNan/node_postgres' o 'DanteBelNan/play_chat'."
   }
 }
@@ -37,4 +37,17 @@ variable "build_command" {
   description = "Comando de Docker Compose a ejecutar en la instancia."
   type        = string
   default     = "docker compose up -d --build"
+}
+
+# --- Variables de AWS acces key ---
+variable "aws_access_key_id" {
+  description = "Access Key ID para autenticación de AWS (para GitHub Actions)."
+  type        = string
+  sensitive   = true 
+}
+
+variable "aws_secret_access_key" {
+  description = "Secret Access Key para autenticación de AWS (para GitHub Actions)."
+  type        = string
+  sensitive   = true 
 }

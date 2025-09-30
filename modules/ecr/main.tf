@@ -12,3 +12,8 @@ resource "aws_ecr_repository" "app_repo" {
     Name = "${var.app_name}-ECR"
   }
 }
+
+output "repository_url" {
+  description = "El URI completo del ECR."
+  value       = aws_ecr_repository.app_repo.repository_url
+}
