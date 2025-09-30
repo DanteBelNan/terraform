@@ -1,4 +1,15 @@
-# environments/dev/main.tf
+provider "aws" {
+  region = "us-east-2" 
+}
+
+
+module "github_repo" {
+  source          = "../../../modules/github_repo"
+  app_name        = var.app_name
+  github_token    = var.github_token
+  github_owner    = var.github_owner
+  repo_template   = var.repo_template
+}
 
 # 1. Definición del ECR
 module "ecr" {

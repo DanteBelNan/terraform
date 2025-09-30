@@ -12,3 +12,4 @@ crash.log
 # Credentials (if you use them, though IAM role is better)
 *.tfvars
 .kube/
+.env

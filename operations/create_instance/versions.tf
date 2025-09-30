@@ -4,6 +4,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    github = {
+      source  = "integrations/github"
+      version = "~> 6.0"
+    }
   }
 
   backend "s3" {
@@ -13,8 +17,4 @@ terraform {
     dynamodb_table = "terraform-state-locks" 
     encrypt        = true
   }
-}
-
-provider "aws" {
-  region = "us-east-2" 
 }
