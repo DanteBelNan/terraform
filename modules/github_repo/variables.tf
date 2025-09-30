@@ -1,49 +1,51 @@
-# modules/github_repo/variables.tf
-
-# --- Variables de Configuración de GitHub ---
+# --- GitHub Configuration Variables ---
 
 variable "app_name" {
-  description = "Nombre de la aplicación para nombrar el nuevo repositorio."
+  description = "Application name used for naming the new repository."
   type        = string
 }
 
 variable "github_token" {
-  description = "Token de Acceso Personal de GitHub (PAT) con scopes 'repo' y 'workflow'."
+  description = "GitHub Personal Access Token (PAT) with 'repo' and 'workflow' scopes."
   type        = string
   sensitive   = true 
 }
 
 variable "github_owner" {
-  description = "Nombre de la organización o usuario de GitHub donde se creará el repositorio."
+  description = "The GitHub organization or user where the repository will be created."
   type        = string
 }
 
 variable "repo_template" {
-  description = "Nombre completo del repositorio de plantilla (owner/repo-name). Ej: DanteBelNan/node_postgres."
+  description = "Full name of the template repository (owner/repo-name). E.g., DanteBelNan/node_template."
   type        = string
+  validation {
+    condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template)
+    error_message = "The value for repo_template must be one of the valid options: 'DanteBelNan/node_template' or 'DanteBelNan/html_template'."
+  }
 }
 
-# --- Variables para la Configuración de CI/CD (Secrets y ECR) ---
+# --- CI/CD Configuration Variables (Secrets and ECR) ---
 
 variable "ecr_repository_url" {
-  description = "URI completo del ECR creado, usado para inyectar en el workflow de GitHub Actions."
+  description = "Full ECR URI used for injection into the GitHub Actions workflow."
   type        = string
 }
 
 variable "aws_access_key_id" {
-  description = "Access Key ID para configurar GitHub Secrets de AWS."
+  description = "AWS Access Key ID for configuring GitHub Secrets."
   type        = string
   sensitive   = true
 }
 
 variable "aws_secret_access_key" {
-  description = "Secret Access Key para configurar GitHub Secrets de AWS."
+  description = "AWS Secret Access Key for configuring GitHub Secrets."
   type        = string
   sensitive   = true
 }
 
 variable "aws_region" {
-  description = "Región de AWS, usada para inyectar en el workflow."
+  description = "AWS Region, used for injection into the workflow."
   type        = string
   default     = "us-east-2"
 }

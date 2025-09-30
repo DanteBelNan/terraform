@@ -1,4 +1,4 @@
 variable "app_name" {
-  description = "Nombre base de la aplicación y prefijo para los recursos"
+  description = "App name"
   type        = string
 }
