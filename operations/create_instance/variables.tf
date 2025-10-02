@@ -30,7 +30,7 @@ variable "repo_template" {
 variable "instance_type" {
   description = "The EC2 instance type to launch."
   type        = string
-  default     = "t3.small" 
+  default     = "t2.micro" 
 }
 
 variable "build_command" {

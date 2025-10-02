@@ -60,6 +60,7 @@ resource "aws_iam_role_policy_attachment" "ecr_readonly_attach" {
 }
 
 # 2.3 Attach SSM Core Policy (Needed for the instance to be managed by SSM)
+# This is crucial for Jenkins to deploy via SSM later.
 resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
   role       = aws_iam_role.ecr_reader_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -123,4 +124,44 @@ resource "aws_instance" "app_server" {
   iam_instance_profile = aws_iam_instance_profile.ecr_reader_profile.name
 
   user_data = <<-EOF
-              #!/bin
+              #!/bin/bash
+              
+              # 1. Install Dependencies (Docker, Git, AWS CLI, Docker Compose)
+              sudo apt update -y
+              # SSM Agent is assumed to be present on the base AMI or will be installed by AWS itself.
+              sudo apt install -y awscli git docker-compose-plugin 
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -aG docker ubuntu
+              sleep 10
+              
+              # 2. End provisioning. Deployment will be handled by Jenkins/SSM.
+              echo "Provisioning complete. Awaiting deployment command from CD system."
+              EOF
+
+  tags = {
+    Name = "${var.app_name}-Server"
+    Environment = "App"
+  }
+}
+
+# ----------------------------------------------------
+# 5. ELASTIC IP & OUTPUTS
+# ----------------------------------------------------
+
+# 5.1 Elastic IP (EIP)
+resource "aws_eip" "app_ip" {
+  instance = aws_instance.app_server.id
+}
+
+output "instance_id" {
+  description = "Application server instance ID."
+  value       = aws_instance.app_server.id
+}
+
+output "instance_ip" {
+  description = "Public IP address."
+  value       = aws_eip.app_ip.public_ip
+}
