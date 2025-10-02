@@ -7,6 +7,11 @@ locals {
   app_repositories = ["node-repo", "nginx-repo", "cli-repo"]
 }
 
+provider "github" {
+  token = var.github_token
+  owner = var.github_owner
+}
+
 # Generate the JSON string containing all ECR URLs
 locals {
   ecr_urls_map = {

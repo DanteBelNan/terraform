@@ -3,11 +3,6 @@ provider "aws" {
   region = "us-east-2" 
 }
 
-provider "github" {
-  token = var.github_token
-  owner = var.github_owner
-}
-
 # 1. ECR Definition Module
 module "ecr" {
   source   = "../../modules/ecr"
