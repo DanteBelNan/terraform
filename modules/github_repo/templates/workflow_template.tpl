@@ -1,5 +1,3 @@
-# modules/github_repo/templates/workflow_template.tpl
-
 name: Multi-Image Build & Push to ECR
 
 on:
@@ -33,7 +31,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build, Tag, Push Images & Create Deploy Compose File
+      - name: Build, Tag, and Push Images
         env:
           IMAGE_TAG: $${{ github.sha }} 
         run: |
@@ -65,76 +63,3 @@ jobs:
           docker tag $CLI_URI:$IMAGE_TAG $CLI_URI:latest
           docker push $CLI_URI:$IMAGE_TAG
           docker push $CLI_URI:latest
-          
-          # --- CREATE docker-compose.deploy.yml (CRITICAL) ---
-          echo "Creating docker-compose.deploy.yml with ECR URIs"
-          
-          cat <<EOT > docker-compose.deploy.yml
-          version: '3.8'
-
-          services:
-
-            # 1. PostgreSQL Database Service
-            db:
-              image: postgres:16-alpine
-              container_name: postgres_db
-              restart: always
-              environment:
-                POSTGRES_DB: $${POSTGRES_DB}
-                POSTGRES_USER: $${POSTGRES_USER}
-                POSTGRES_PASSWORD: $${POSTGRES_PASSWORD}
-              ports:
-                - "$${DB_PORT}:5432"
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-
-            # 2. Backend Service (Points to ECR - NO build)
-            node:
-              image: $NODE_URI:latest
-              container_name: node_backend
-              restart: always
-              depends_on:
-                - db 
-              environment:
-                NODE_ENV: $${NODE_ENV}
-                PORT: $${APP_PORT}
-                SECRET_KEY: $${SECRET_KEY}
-                DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}
-              volumes:
-                - /app/node_modules 
-
-            # 3. Nginx Service (Points to ECR - NO build)
-            nginx:
-              image: $NGINX_URI:latest
-              container_name: nginx_proxy
-              restart: always
-              ports:
-                - "8080:80" 
-              depends_on:
-                - node
-                
-            # 4. CLI Service (Points to ECR - NO build)
-            cli:
-              image: $CLI_URI:latest
-              container_name: node
-              depends_on:
-                - db
-                - node
-              environment:
-                DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}
-                NODE_ENV: $${NODE_ENV}
-              volumes:
-                - /app/node_modules
-              entrypoint: sh 
-              command: -c "tail -f /dev/null"
-
-          volumes:
-            postgres_data:
-          EOT
-          
-          # --- PUSH DEPLOY FILE ---
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git add docker-compose.deploy.yml
-          git commit -m "CI: Update docker-compose.deploy.yml with ECR URIs" || true
-          git push
