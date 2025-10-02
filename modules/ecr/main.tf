@@ -1,5 +1,7 @@
-resource "aws_ecr_repository" "app_repo" {
-  name                 = "${lower(var.app_name)}-repo"
+resource "aws_ecr_repository" "app_repos" {
+  for_each             = toset(var.repo_names)
+  
+  name                 = "${lower(var.app_name)}-${each.value}"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -7,11 +9,11 @@ resource "aws_ecr_repository" "app_repo" {
   }
 
   tags = {
-    Name = "${var.app_name}-ecr"
+    Name = "${var.app_name}-${each.value}-ecr"
   }
 }
 
-output "repository_url" {
-  description = "The complete ECR URI."
-  value       = aws_ecr_repository.app_repo.repository_url
+output "repository_urls" {
+  description = "Map of all ECR URIs created."
+  value       = { for name, repo in aws_ecr_repository.app_repos : name => repo.repository_url }
 }

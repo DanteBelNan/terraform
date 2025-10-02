@@ -33,10 +33,10 @@ variable "instance_type" {
   default     = "t3.small" 
 }
 
-variable "run_command" {
-  description = "Docker run command to execute the container after pull (e.g., docker run -d -p 8080:80)."
+variable "build_command" {
+  description = "The Docker Compose command to run the application (PULL and UP)."
   type        = string
-  default     = "sudo docker run -d -p 8080:80 --restart=always"
+  default     = "sudo docker compose -f docker-compose.deploy.yml pull && sudo docker compose -f docker-compose.deploy.yml up -d"
 }
 
 # --- AWS Access Keys for GitHub Secrets ---

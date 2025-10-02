@@ -4,6 +4,10 @@ provider "github" {
   owner = var.github_owner 
 }
 
+locals {
+  ecr_urls_json = jsonencode(var.ecr_repository_urls)
+}
+
 # --- 1. Create Repository from Template ---
 resource "github_repository" "new_app_repo" {
   name        = lower(var.app_name)
@@ -32,15 +36,16 @@ resource "github_actions_secret" "aws_secret_key" {
   plaintext_value = var.aws_secret_access_key
 }
 
-# --- 3. Update Workflow File (Inject ECR URI) ---
+# --- 3. Update Workflow File (Inject ECR URIs) ---
 resource "github_repository_file" "workflow_update" {
   repository          = github_repository.new_app_repo.name
   file                = ".github/workflows/build_push_ecr.yml"
   content             = templatefile("${path.module}/templates/workflow_template.tpl", {
-    ecr_repo_uri = var.ecr_repository_url
-    aws_region   = var.aws_region
+    ecr_urls_json  = local.ecr_urls_json
+    aws_region     = var.aws_region
+    app_name       = var.app_name
   })
-  commit_message      = "Terraform: Update ECR URI and Region for CI/CD"
+  commit_message      = "Terraform: Update ECR URIs and Region for CI/CD"
   
   depends_on          = [
     github_repository.new_app_repo, 

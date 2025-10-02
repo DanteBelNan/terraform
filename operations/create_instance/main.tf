@@ -1,3 +1,5 @@
+# operations/create_instance/main.tf
+
 # --- AWS Provider Configuration ---
 provider "aws" {
   region = "us-east-2" 
@@ -5,13 +7,14 @@ provider "aws" {
 
 # 1. ECR Definition Module
 module "ecr" {
-  source   = "../../modules/ecr"
+  source   = "../../../modules/ecr"
   app_name = var.app_name 
+  repo_names = ["node-repo", "nginx-repo", "cli-repo"] 
 }
 
-# 2. GitHub Module (Creates Repo, Secrets, and Workflow)
+# 2. GitHub Module
 module "github_repo" {
-  source          = "../../modules/github_repo"
+  source          = "../../../modules/github_repo"
   app_name        = var.app_name
   
   # Repository Configuration Parameters
@@ -19,20 +22,20 @@ module "github_repo" {
   github_owner    = var.github_owner
   repo_template   = var.repo_template
   
-  # CI/CD Parameters (GitHub Actions Secrets & Workflow)
-  ecr_repository_url    = module.ecr.repository_url 
+  # CI/CD Parameters
+  ecr_repository_urls   = module.ecr.repository_urls 
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
 }
 
 # 3. Compute Server Definition (EC2, EIP, SG)
 module "compute_server" {
-  source          = "../../modules/compute"
+  source          = "../../../modules/compute"
   app_name        = var.app_name
   instance_type   = var.instance_type
   
-  # Pass ECR URI, Region, and Run Command
-  ecr_image_uri   = "${module.ecr.repository_url}:latest"
+  github_repo_url = module.github_repo.http_clone_url
   aws_region      = "us-east-2" 
-  run_command     = var.run_command 
+  
+  build_command   = var.build_command
 }

@@ -17,7 +17,7 @@ variable "github_owner" {
 }
 
 variable "repo_template" {
-  description = "Full name of the template repository (owner/repo-name). E.g., DanteBelNan/node_template."
+  description = "Full name of the template repository (owner/repo-name)."
   type        = string
   validation {
     condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template)
@@ -27,9 +27,9 @@ variable "repo_template" {
 
 # --- CI/CD Configuration Variables (Secrets and ECR) ---
 
-variable "ecr_repository_url" {
-  description = "Full URI of the ECR created, used for injection into the GitHub Actions workflow."
-  type        = string
+variable "ecr_repository_urls" {
+  description = "Map of ECR URIs (repo_name => full_uri) used for injection into the GitHub Actions workflow."
+  type        = map(string)
 }
 
 variable "aws_access_key_id" {

@@ -1,125 +1,138 @@
-# modules/compute/main.tf
+# 1. DATA SOURCES
 
-# Resource: Elastic IP (EIP)
-resource "aws_eip" "app_eip" {
-  domain = "vpc"
-  tags = {
-    Name = "${var.app_name}-EIP"
+# 1.1 Latest Ubuntu AMI
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
   }
+  owners = ["099720109477"]
 }
 
-# Resource: Security Group for the EC2 Instance
+# 1.2 Default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+data "aws_subnet_ids" "all" {
+  vpc_id = data.aws_vpc.default.id
+}
+
+# 1.3 Local SSH Public Key
+data "local_file" "ssh_public_key" {
+  filename = "/home/ubuntu/.ssh/id_rsa.pub"
+}
+
+# 2. IAM ROLE (ECR Read Permissions)
+
+# 2.1 IAM Role Definition
+resource "aws_iam_role" "ecr_reader_role" {
+  name = "${var.app_name}-ecr-reader-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+}
+
+# 2.2 Attach ECR Read-Only Policy
+resource "aws_iam_role_policy_attachment" "ecr_readonly_attach" {
+  role       = aws_iam_role.ecr_reader_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
+# 2.3 Create IAM Instance Profile
+resource "aws_iam_instance_profile" "ecr_reader_profile" {
+  name = "${var.app_name}-ecr-reader-profile"
+  role = aws_iam_role.ecr_reader_role.name
+}
+
+# 3. NETWORK & SSH KEY
+
+# 3.1 Security Group
 resource "aws_security_group" "app_sg" {
   name        = "${var.app_name}-sg"
-  description = "Allows SSH, HTTP, and HTTPS access"
+  vpc_id      = data.aws_vpc.default.id
 
-  # Allow SSH (Port 22)
+  # Ingress: SSH (Port 22)
   ingress {
-    description = "SSH access"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
-  }
-
-  # Allow Custom Web App Port (Port 8080) 
-  ingress {
-    description = "Web App access for NGINX/Application"
-    from_port   = 8080
-    to_port     = 8080
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] 
-  }
-  
-  # Allow all outbound traffic
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1" 
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = {
-    Name = "${var.app_name}-SecurityGroup"
+  # Ingress: Application Port (8080)
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Egress: All traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 }
 
-# Resource: EC2 Instance
-resource "aws_instance" "app_server" {
-  ami           = data.aws_ami.ubuntu_latest.id
-  instance_type = var.instance_type
-  
-  key_name      = "terraform-key"
+# 3.2 Key Pair for SSH
+resource "aws_key_pair" "deployer_key" {
+  key_name   = "${var.app_name}-deployer-key"
+  public_key = data.local_file.ssh_public_key.content
+}
 
+# 4. EC2 INSTANCE
+resource "aws_instance" "app_server" {
+  ami           = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  key_name      = aws_key_pair.deployer_key.key_name 
+  subnet_id     = tolist(data.aws_subnet_ids.all.ids)[0]
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.ecr_reader_profile.name
 
   user_data = <<-EOF
               #!/bin/bash
 
-              # Terraform Input Variables
-              IMAGE_URI="${var.ecr_image_uri}"
-              RUN_CMD="${var.run_command}"
-              REGION="${var.aws_region}"
+              GITHUB_REPO_URL="${var.github_repo_url}"
+              BUILD_CMD="${var.build_command}"
+              AWS_REGION="${var.aws_region}" 
+              REPO_DIR="/home/ubuntu/${var.app_name}"
               
-              # 1. Initial Configuration (APT, Docker, AWS CLI)
-              echo "Starting update and dependency installation..."
+              # 1. Install Dependencies (Docker, Git, AWS CLI, Docker Compose)
               sudo apt update -y
-              
-              # Install packages (AWS CLI is CRUCIAL for ECR login)
-              sudo apt install -y awscli git 
-              
-              # Install Docker Engine (NO Docker Compose needed)
-              echo "Installing Docker Engine..."
+              sudo apt install -y awscli git docker-compose-plugin 
               curl -fsSL https://get.docker.com -o get-docker.sh
               sudo sh get-docker.sh
               sudo systemctl start docker
               sudo systemctl enable docker
-              
-              # Add 'ubuntu' user to the 'docker' group
               sudo usermod -aG docker ubuntu
-              
-              # Wait a moment for Docker to be fully ready
               sleep 10
               
-              # 2. Authenticate to ECR and Pull Image
-              echo "Authenticating to ECR in region $REGION..."
+              # 2. Authenticate to ECR 
+              LOGIN_URL=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com
+              AUTH_TOKEN=$(aws ecr get-login-password --region $AWS_REGION)
+              sudo docker login --username AWS --password $AUTH_TOKEN $LOGIN_URL
               
-              # Get ECR login token and log Docker into the registry
-              AUTH_TOKEN=$(aws ecr get-login-password --region $REGION)
-              REGISTRY=$(echo "$IMAGE_URI" | cut -d/ -f1)
-              
-              sudo docker login --username AWS --password $AUTH_TOKEN $REGISTRY
-              
-              if [ $? -eq 0 ]; then
-                echo "ECR login successful."
-                
-                # 3. Pull the Image from ECR
-                echo "Pulling image: $IMAGE_URI"
-                sudo docker pull "$IMAGE_URI"
-                
-                if [ $? -eq 0 ]; then
-                  echo "Image pull successful. Starting application..."
-
-                  # 4. Stop and Run the Container (ensures clean restart)
-                  sudo docker stop ${var.app_name} || true
-                  sudo docker rm ${var.app_name} || true
-                  
-                  # Execute the Docker run command provided by the Terraform variable
-                  sudo sh -c "$RUN_CMD --name ${var.app_name} $IMAGE_URI"
-                  
-                  if [ $? -eq 0 ]; then
-                    echo "Container started successfully."
-                  else
-                    echo "ERROR: Docker run command failed."
-                  fi
-                  
-                else
-                  echo "ERROR: Docker Pull failed. Check IMAGE_URI and ECR permissions."
-                fi
-              else
-                echo "ERROR: ECR login failed. Check IAM permissions or Region."
+              if [ $? -ne 0 ]; then
+                exit 1
               fi
+              
+              # 3. Clone Repo and Deploy
+              sudo -u ubuntu git clone "$GITHUB_REPO_URL" "$REPO_DIR" 
+              cd "$REPO_DIR"
+              sudo sh -c "$BUILD_CMD"
               EOF
 
   tags = {
@@ -127,8 +140,14 @@ resource "aws_instance" "app_server" {
   }
 }
 
-# Asociación de la EIP 
-resource "aws_eip_association" "eip_assoc" {
-  instance_id   = aws_instance.app_server.id
-  allocation_id = aws_eip.app_eip.id
+# 5. OUTPUTS
+
+# 5.1 Elastic IP (EIP)
+resource "aws_eip" "app_ip" {
+  instance = aws_instance.app_server.id
+}
+
+output "instance_ip" {
+  description = "Public IP address."
+  value       = aws_eip.app_ip.public_ip
 }

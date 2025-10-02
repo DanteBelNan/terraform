@@ -8,9 +8,8 @@ variable "instance_type" {
   type        = string
 }
 
-# --- Image and Region for Pull ---
-variable "ecr_image_uri" {
-  description = "Full URI of the Docker image in ECR (e.g., 123.dkr.ecr.us-east-2.amazonaws.com/myapp:latest)."
+variable "github_repo_url" {
+  description = "The HTTPS clone URL of the application repository."
   type        = string
 }
 
@@ -21,8 +20,8 @@ variable "aws_region" {
 }
 
 # --- Command to RUN the single container ---
-variable "run_command" {
-  description = "The Docker run command to execute the container after pulling (e.g., docker run -d -p 8080:80)."
+variable "build_command" {
+  description = "The Docker Compose command to run the application (now a PULL and UP)."
   type        = string
-  default     = "sudo docker run -d -p 8080:80 --restart=always" 
+  default     = "sudo docker compose -f docker-compose.deploy.yml pull && sudo docker compose -f docker-compose.deploy.yml up -d"
 }
