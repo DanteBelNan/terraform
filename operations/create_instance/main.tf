@@ -7,14 +7,14 @@ provider "aws" {
 
 # 1. ECR Definition Module
 module "ecr" {
-  source   = "../../../modules/ecr"
+  source   = "../../modules/ecr"
   app_name = var.app_name 
   repo_names = ["node-repo", "nginx-repo", "cli-repo"] 
 }
 
 # 2. GitHub Module
 module "github_repo" {
-  source          = "../../../modules/github_repo"
+  source          = "../../modules/github_repo"
   app_name        = var.app_name
   
   # Repository Configuration Parameters
@@ -30,7 +30,7 @@ module "github_repo" {
 
 # 3. Compute Server Definition (EC2, EIP, SG)
 module "compute_server" {
-  source          = "../../../modules/compute"
+  source          = "../../modules/compute"
   app_name        = var.app_name
   instance_type   = var.instance_type
   
