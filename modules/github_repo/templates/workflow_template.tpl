@@ -38,16 +38,21 @@ jobs:
         env:
           IMAGE_TAG: ${{ github.sha }} 
         run: |
+          # Captura la URL del login de ECR
           REGISTRY_URL=${{ steps.login-ecr.outputs.registry }}
 
-          echo "ECR Target: $REGISTRY_URL/$ECR_REPOSITORY"
+          # Usa las variables inyectadas por Terraform y GitHub Actions
+          ECR_REPO_NAME=${{ env.ECR_REPOSITORY }}
+          
+          echo "ECR Target: $REGISTRY_URL/$ECR_REPO_NAME"
 
-          # 1. Compila la imagen 
-          docker build -t $REGISTRY_URL/$ECR_REPOSITORY:$IMAGE_TAG -f ./docker/Dockerfile.node ./backend
+          # 1. Compila la imagen (asume que el Dockerfile está en ./docker/Dockerfile.node y el contexto en ./backend)
+          # Asegúrate de que las rutas relativas sean correctas para tu plantilla
+          docker build -t $REGISTRY_URL/$ECR_REPO_NAME:$IMAGE_TAG -f ./docker/Dockerfile.node ./backend
 
           # 2. Etiqueta como 'latest'
-          docker tag $REGISTRY_URL/$ECR_REPOSITORY:$IMAGE_TAG $REGISTRY_URL/$ECR_REPOSITORY:latest
+          docker tag $REGISTRY_URL/$ECR_REPO_NAME:$IMAGE_TAG $REGISTRY_URL/$ECR_REPO_NAME:latest
 
           # 3. Empuja al ECR
-          docker push $REGISTRY_URL/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $REGISTRY_URL/$ECR_REPOSITORY:latest
+          docker push $REGISTRY_URL/$ECR_REPO_NAME:$IMAGE_TAG
+          docker push $REGISTRY_URL/$ECR_REPO_NAME:latest

@@ -32,24 +32,7 @@ resource "github_actions_secret" "aws_secret_key" {
   plaintext_value = var.aws_secret_access_key
 }
 
-# --- 3. Update README.md (Conditional: Only for node_template) ---
-resource "github_repository_file" "readme_update" {
-  count               = var.repo_template == "DanteBelNan/node_template" ? 1 : 0
-  
-  repository          = github_repository.new_app_repo.name
-  file                = "README.md"
-  
-  content             = templatefile("${path.module}/templates/readme_template.tpl", {
-    app_name      = lower(var.app_name)
-    github_owner  = var.github_owner
-  })
-  
-  commit_message      = "Terraform: Update README.md with actual application name."
-  
-  depends_on          = [github_repository.new_app_repo]
-}
-
-# --- 4. Update Workflow File (Inject ECR URI) ---
+# --- 3. Update Workflow File (Inject ECR URI) ---
 resource "github_repository_file" "workflow_update" {
   repository          = github_repository.new_app_repo.name
   file                = ".github/workflows/build_push_ecr.yml"
