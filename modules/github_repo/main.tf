@@ -46,7 +46,7 @@ resource "github_repository_file" "workflow_update" {
     app_name       = var.app_name
   })
   commit_message      = "Terraform: Update ECR URIs and Region for CI/CD"
-  
+  overwrite_on_create = true
   depends_on          = [
     github_repository.new_app_repo, 
     github_actions_secret.aws_key_id
