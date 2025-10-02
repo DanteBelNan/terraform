@@ -27,10 +27,10 @@ data "aws_subnets" "all" {
   }
 }
 
-# 1.4 Local SSH Public Key
-data "local_file" "ssh_public_key" {
-  filename = "/home/ubuntu/.ssh/id_rsa.pub"
-}
+# 1.4 Local SSH Public Key (ELIMINADO - Ya no se usa)
+# data "local_file" "ssh_public_key" {
+#   filename = "/home/ubuntu/.ssh/id_rsa.pub"
+# }
 
 # ----------------------------------------------------
 # 2. IAM ROLE (ECR Read Permissions + SSM Agent)
@@ -59,8 +59,7 @@ resource "aws_iam_role_policy_attachment" "ecr_readonly_attach" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-# 2.3 Attach SSM Core Policy (Needed for the instance to be managed by SSM)
-# This is crucial for Jenkins to deploy via SSM later.
+# 2.3 Attach SSM Core Policy (For Jenkins deployment via SSM)
 resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
   role       = aws_iam_role.ecr_reader_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
@@ -106,19 +105,15 @@ resource "aws_security_group" "app_sg" {
   }
 }
 
-# 3.2 Key Pair for SSH
-resource "aws_key_pair" "deployer_key" {
-  key_name   = "${var.app_name}-deployer-key"
-  public_key = data.local_file.ssh_public_key.content
-}
-
 # ----------------------------------------------------
 # 4. EC2 INSTANCE (Application Server)
 # ----------------------------------------------------
 resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
-  key_name      = aws_key_pair.deployer_key.key_name 
+  
+  key_name      = "terraform-key" 
+  
   subnet_id     = tolist(data.aws_subnets.all.ids)[0] 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile = aws_iam_instance_profile.ecr_reader_profile.name
@@ -128,7 +123,6 @@ resource "aws_instance" "app_server" {
               
               # 1. Install Dependencies (Docker, Git, AWS CLI, Docker Compose)
               sudo apt update -y
-              # SSM Agent is assumed to be present on the base AMI or will be installed by AWS itself.
               sudo apt install -y awscli git docker-compose-plugin 
               curl -fsSL https://get.docker.com -o get-docker.sh
               sudo sh get-docker.sh
