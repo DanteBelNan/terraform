@@ -1,5 +1,3 @@
-# operations/create_ci_instance/main.tf
-
 # --- AWS Provider Configuration ---
 provider "aws" {
   region = var.aws_region
@@ -14,7 +12,7 @@ module "jenkins_server" {
 }
 
 # ----------------------------------------------------
-# OUTPUTS
+# OUTPUTS (Kept in main.tf)
 # ----------------------------------------------------
 
 output "jenkins_public_ip" {

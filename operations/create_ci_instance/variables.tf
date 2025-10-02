@@ -1,6 +1,7 @@
 variable "app_name" {
-  description = "The name for the CI infrastructure components (e.g., ci-server)."
+  description = "The name for the CI infrastructure components (e.g., jenkins)."
   type        = string
+  default     = "jenkins"
 }
 
 variable "aws_region" {
