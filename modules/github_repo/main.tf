@@ -102,3 +102,8 @@ resource "github_repository_file" "deploy_compose_file" {
     github_repository.new_app_repo
   ]
 }
+
+output "http_clone_url" {
+  description = "The HTTPS URL to clone the application repository."
+  value       = github_repository.new_app_repo.http_clone_url 
+}

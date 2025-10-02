@@ -8,11 +8,6 @@ variable "instance_type" {
   type        = string
 }
 
-variable "github_repo_url" {
-  description = "The HTTPS clone URL of the application repository."
-  type        = string
-}
-
 variable "aws_region" {
   description = "AWS Region of the ECR registry."
   type        = string

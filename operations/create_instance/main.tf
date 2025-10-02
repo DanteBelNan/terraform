@@ -32,8 +32,20 @@ module "compute_server" {
   app_name        = var.app_name
   instance_type   = var.instance_type
   
-  github_repo_url = module.github_repo.http_clone_url
   aws_region      = "us-east-2" 
   
   build_command   = var.build_command
+}
+
+output "app_instance_id" {
+  value = module.compute_server.instance_id
+}
+
+output "app_public_ip" {
+  value = module.compute_server.instance_ip
+}
+
+output "github_repository_url" {
+  description = "URL del repositorio created."
+  value       = module.github_repo.http_clone_url
 }
