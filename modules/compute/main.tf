@@ -1,4 +1,8 @@
+# modules/compute/main.tf
+
+# ----------------------------------------------------
 # 1. DATA SOURCES
+# ----------------------------------------------------
 
 # 1.1 Latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
@@ -15,6 +19,7 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# 1.3 Subnets
 data "aws_subnets" "all" {
   filter {
     name   = "vpc-id"
@@ -22,13 +27,14 @@ data "aws_subnets" "all" {
   }
 }
 
-
-# 1.3 Local SSH Public Key
+# 1.4 Local SSH Public Key
 data "local_file" "ssh_public_key" {
   filename = "/home/ubuntu/.ssh/id_rsa.pub"
 }
 
-# 2. IAM ROLE (ECR Read Permissions)
+# ----------------------------------------------------
+# 2. IAM ROLE (ECR Read Permissions + SSM Agent)
+# ----------------------------------------------------
 
 # 2.1 IAM Role Definition
 resource "aws_iam_role" "ecr_reader_role" {
@@ -53,13 +59,21 @@ resource "aws_iam_role_policy_attachment" "ecr_readonly_attach" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-# 2.3 Create IAM Instance Profile
+# 2.3 Attach SSM Core Policy (Needed for the instance to be managed by SSM)
+resource "aws_iam_role_policy_attachment" "ssm_managed_instance" {
+  role       = aws_iam_role.ecr_reader_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# 2.4 Create IAM Instance Profile
 resource "aws_iam_instance_profile" "ecr_reader_profile" {
   name = "${var.app_name}-ecr-reader-profile"
   role = aws_iam_role.ecr_reader_role.name
 }
 
+# ----------------------------------------------------
 # 3. NETWORK & SSH KEY
+# ----------------------------------------------------
 
 # 3.1 Security Group
 resource "aws_security_group" "app_sg" {
@@ -97,61 +111,16 @@ resource "aws_key_pair" "deployer_key" {
   public_key = data.local_file.ssh_public_key.content
 }
 
-# 4. EC2 INSTANCE
+# ----------------------------------------------------
+# 4. EC2 INSTANCE (Application Server)
+# ----------------------------------------------------
 resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
   key_name      = aws_key_pair.deployer_key.key_name 
-  subnet_id     = tolist(data.aws_subnets.all.ids)[0]
+  subnet_id     = tolist(data.aws_subnets.all.ids)[0] 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile = aws_iam_instance_profile.ecr_reader_profile.name
 
   user_data = <<-EOF
-              #!/bin/bash
-
-              GITHUB_REPO_URL="${var.github_repo_url}"
-              BUILD_CMD="${var.build_command}"
-              AWS_REGION="${var.aws_region}" 
-              REPO_DIR="/home/ubuntu/${var.app_name}"
-              
-              # 1. Install Dependencies (Docker, Git, AWS CLI, Docker Compose)
-              sudo apt update -y
-              sudo apt install -y awscli git docker-compose-plugin 
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              sudo sh get-docker.sh
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -aG docker ubuntu
-              sleep 10
-              
-              # 2. Authenticate to ECR 
-              LOGIN_URL=$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$AWS_REGION.amazonaws.com
-              AUTH_TOKEN=$(aws ecr get-login-password --region $AWS_REGION)
-              sudo docker login --username AWS --password $AUTH_TOKEN $LOGIN_URL
-              
-              if [ $? -ne 0 ]; then
-                exit 1
-              fi
-              
-              # 3. Clone Repo and Deploy
-              sudo -u ubuntu git clone "$GITHUB_REPO_URL" "$REPO_DIR" 
-              cd "$REPO_DIR"
-              sudo sh -c "$BUILD_CMD"
-              EOF
-
-  tags = {
-    Name = "${var.app_name}-Server"
-  }
-}
-
-# 5. OUTPUTS
-
-# 5.1 Elastic IP (EIP)
-resource "aws_eip" "app_ip" {
-  instance = aws_instance.app_server.id
-}
-
-output "instance_ip" {
-  description = "Public IP address."
-  value       = aws_eip.app_ip.public_ip
-}
+              #!/bin
