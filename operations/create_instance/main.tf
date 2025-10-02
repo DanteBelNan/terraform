@@ -1,5 +1,3 @@
-# operations/create_instance/main.tf
-
 # --- AWS Provider Configuration ---
 provider "aws" {
   region = "us-east-2" 

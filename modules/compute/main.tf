@@ -15,9 +15,13 @@ data "aws_vpc" "default" {
   default = true
 }
 
-data "aws_subnet_ids" "all" {
-  vpc_id = data.aws_vpc.default.id
+data "aws_subnets" "all" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
 }
+
 
 # 1.3 Local SSH Public Key
 data "local_file" "ssh_public_key" {
@@ -98,7 +102,7 @@ resource "aws_instance" "app_server" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
   key_name      = aws_key_pair.deployer_key.key_name 
-  subnet_id     = tolist(data.aws_subnet_ids.all.ids)[0]
+  subnet_id     = tolist(data.aws_subnets.all.ids)[0]
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile = aws_iam_instance_profile.ecr_reader_profile.name
 
