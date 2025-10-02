@@ -9,7 +9,6 @@ on:
   workflow_dispatch:
 
 env:
-  # Valores inyectados por Terraform. Encerrar en comillas simples para evitar conflictos con YAML.
   ECR_URLS_JSON: '${ecr_urls_json}'
   AWS_REGION: '${aws_region}'
   APP_NAME: '${app_name}'
@@ -81,11 +80,11 @@ jobs:
               container_name: postgres_db
               restart: always
               environment:
-                POSTGRES_DB: \${POSTGRES_DB}
-                POSTGRES_USER: \${POSTGRES_USER}
-                POSTGRES_PASSWORD: \${POSTGRES_PASSWORD}
+                POSTGRES_DB: $${POSTGRES_DB}
+                POSTGRES_USER: $${POSTGRES_USER}
+                POSTGRES_PASSWORD: $${POSTGRES_PASSWORD}
               ports:
-                - "\${DB_PORT}:5432"
+                - "$${DB_PORT}:5432"
               volumes:
                 - postgres_data:/var/lib/postgresql/data
 
@@ -97,10 +96,10 @@ jobs:
               depends_on:
                 - db 
               environment:
-                NODE_ENV: \${NODE_ENV}
-                PORT: \${APP_PORT}
-                SECRET_KEY: \${SECRET_KEY}
-                DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB}
+                NODE_ENV: $${NODE_ENV}
+                PORT: $${APP_PORT}
+                SECRET_KEY: $${SECRET_KEY}
+                DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}
               volumes:
                 - /app/node_modules 
 
@@ -122,8 +121,8 @@ jobs:
                 - db
                 - node
               environment:
-                DATABASE_URL: postgres://\${POSTGRES_USER}:\${POSTGRES_PASSWORD}@db:5432/\${POSTGRES_DB}
-                NODE_ENV: \${NODE_ENV}
+                DATABASE_URL: postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/$${POSTGRES_DB}
+                NODE_ENV: $${NODE_ENV}
               volumes:
                 - /app/node_modules
               entrypoint: sh 
