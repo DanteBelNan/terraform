@@ -1,4 +1,4 @@
 variable "app_name" {
-  description = "App name"
+  description = "Application name used for naming the ECR repository."
   type        = string
 }

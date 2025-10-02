@@ -28,7 +28,7 @@ variable "repo_template" {
 # --- CI/CD Configuration Variables (Secrets and ECR) ---
 
 variable "ecr_repository_url" {
-  description = "Full ECR URI used for injection into the GitHub Actions workflow."
+  description = "Full URI of the ECR created, used for injection into the GitHub Actions workflow."
   type        = string
 }
 

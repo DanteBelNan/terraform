@@ -1,3 +1,5 @@
+# modules/compute/main.tf
+
 # Resource: Elastic IP (EIP)
 resource "aws_eip" "app_eip" {
   domain = "vpc"
@@ -6,6 +8,7 @@ resource "aws_eip" "app_eip" {
   }
 }
 
+# Resource: Security Group for the EC2 Instance
 resource "aws_security_group" "app_sg" {
   name        = "${var.app_name}-sg"
   description = "Allows SSH, HTTP, and HTTPS access"
@@ -19,6 +22,7 @@ resource "aws_security_group" "app_sg" {
     cidr_blocks = ["0.0.0.0/0"] 
   }
 
+  # Allow Custom Web App Port (Port 8080) 
   ingress {
     description = "Web App access for NGINX/Application"
     from_port   = 8080
@@ -54,56 +58,67 @@ resource "aws_instance" "app_server" {
               #!/bin/bash
 
               # Terraform Input Variables
-              REPO_URL="${var.github_repo_url}"
-              BUILD_CMD="${var.build_command}"
-              USER="ubuntu"
-              REPO_DIR="/home/$USER/app_repo"
+              IMAGE_URI="${var.ecr_image_uri}"
+              RUN_CMD="${var.run_command}"
+              REGION="${var.aws_region}"
               
-              # 1. Initial Configuration (APT, Docker, Git, Compose Plugin)
+              # 1. Initial Configuration (APT, Docker, AWS CLI)
               echo "Starting update and dependency installation..."
               sudo apt update -y
               
-              # Install basic packages (Git, AWS CLI)
+              # Install packages (AWS CLI is CRUCIAL for ECR login)
               sudo apt install -y awscli git 
               
-              # Install Docker and Docker Compose V2
-              echo "Installing Docker Engine and Compose Plugin..."
-              # Install Docker using the official convenience script
+              # Install Docker Engine (NO Docker Compose needed)
+              echo "Installing Docker Engine..."
               curl -fsSL https://get.docker.com -o get-docker.sh
               sudo sh get-docker.sh
-              
-              # Start Docker
               sudo systemctl start docker
               sudo systemctl enable docker
               
               # Add 'ubuntu' user to the 'docker' group
-              sudo usermod -aG docker $USER
+              sudo usermod -aG docker ubuntu
               
-              # Apply group changes immediately
-              newgrp docker
+              # Wait a moment for Docker to be fully ready
+              sleep 10
               
-              # 2. GitHub Cloning and Build Execution (Docker Compose)
+              # 2. Authenticate to ECR and Pull Image
+              echo "Authenticating to ECR in region $REGION..."
               
-              echo "Starting repository cloning: $REPO_URL"
+              # Get ECR login token and log Docker into the registry
+              AUTH_TOKEN=$(aws ecr get-login-password --region $REGION)
+              REGISTRY=$(echo "$IMAGE_URI" | cut -d/ -f1)
               
-              # Clone and build as the 'ubuntu' user
-              sudo -u $USER git clone "$REPO_URL" "$REPO_DIR"
+              sudo docker login --username AWS --password $AUTH_TOKEN $REGISTRY
               
-              if [ -d "$REPO_DIR" ]; then
-                echo "Cloning successful. Starting build with Docker Compose..."
-                cd "$REPO_DIR"
+              if [ $? -eq 0 ]; then
+                echo "ECR login successful."
                 
-                # Execute the build command. Docker Compose V2 is installed as 'docker compose'.
-                # Execute as the 'ubuntu' user to respect permissions.
-                sudo -u $USER sh -c "$BUILD_CMD"
+                # 3. Pull the Image from ECR
+                echo "Pulling image: $IMAGE_URI"
+                sudo docker pull "$IMAGE_URI"
                 
                 if [ $? -eq 0 ]; then
-                  echo "Project build completed successfully."
+                  echo "Image pull successful. Starting application..."
+
+                  # 4. Stop and Run the Container (ensures clean restart)
+                  sudo docker stop ${var.app_name} || true
+                  sudo docker rm ${var.app_name} || true
+                  
+                  # Execute the Docker run command provided by the Terraform variable
+                  sudo sh -c "$RUN_CMD --name ${var.app_name} $IMAGE_URI"
+                  
+                  if [ $? -eq 0 ]; then
+                    echo "Container started successfully."
+                  else
+                    echo "ERROR: Docker run command failed."
+                  fi
+                  
                 else
-                  echo "ERROR: The build command failed. Check docker-compose.yml."
+                  echo "ERROR: Docker Pull failed. Check IMAGE_URI and ECR permissions."
                 fi
               else
-                echo "ERROR: Git cloning failed. Check the URL."
+                echo "ERROR: ECR login failed. Check IAM permissions or Region."
               fi
               EOF
 
@@ -112,7 +127,7 @@ resource "aws_instance" "app_server" {
   }
 }
 
-# EIP Association 
+# Asociación de la EIP 
 resource "aws_eip_association" "eip_assoc" {
   instance_id   = aws_instance.app_server.id
   allocation_id = aws_eip.app_eip.id

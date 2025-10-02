@@ -20,7 +20,6 @@ variable "repo_template" {
   description = "Full name of the template repository (owner/repo-name). E.g., DanteBelNan/node_template."
   type        = string
   validation {
-    # CORRECTED VALIDATION MESSAGE to match the 'condition'
     condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template) 
     error_message = "The value for repo_template must be one of the valid options: 'DanteBelNan/node_template' or 'DanteBelNan/html_template'."
   }
@@ -34,10 +33,10 @@ variable "instance_type" {
   default     = "t3.small" 
 }
 
-variable "build_command" {
-  description = "Docker Compose CLI command to execute on the instance."
+variable "run_command" {
+  description = "Docker run command to execute the container after pull (e.g., docker run -d -p 8080:80)."
   type        = string
-  default     = "docker compose up -d --build"
+  default     = "sudo docker run -d -p 8080:80 --restart=always"
 }
 
 # --- AWS Access Keys for GitHub Secrets ---
@@ -48,7 +47,7 @@ variable "aws_access_key_id" {
 }
 
 variable "aws_secret_access_key" {
-  description = "AWS Secret Access Key for authentication (used for GitHub Actions Secrets)."
+  description = "Secret Access Key for authentication (used for GitHub Actions Secrets)."
   type        = string
   sensitive   = true 
 }

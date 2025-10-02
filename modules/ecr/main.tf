@@ -1,7 +1,5 @@
-# Recurso: Repositorio ECR
 resource "aws_ecr_repository" "app_repo" {
   name                 = "${lower(var.app_name)}-repo"
-
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -9,11 +7,11 @@ resource "aws_ecr_repository" "app_repo" {
   }
 
   tags = {
-    Name = "${var.app_name}-ECR"
+    Name = "${var.app_name}-ecr"
   }
 }
 
 output "repository_url" {
-  description = "Complete URI of the ECR."
+  description = "The complete ECR URI."
   value       = aws_ecr_repository.app_repo.repository_url
 }

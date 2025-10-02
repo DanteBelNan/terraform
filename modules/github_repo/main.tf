@@ -6,7 +6,7 @@ provider "github" {
 
 # --- 1. Create Repository from Template ---
 resource "github_repository" "new_app_repo" {
-  name        = lower(var.app_name) 
+  name        = lower(var.app_name)
   description = "Application repository deployed by Terraform."
   visibility  = "public"
   
@@ -39,7 +39,7 @@ resource "github_repository_file" "readme_update" {
   repository          = github_repository.new_app_repo.name
   file                = "README.md"
   
-  content             = templatefile("${path.module}/templates/readme_node_template.tpl", {
+  content             = templatefile("${path.module}/templates/readme_template.tpl", {
     app_name      = lower(var.app_name)
     github_owner  = var.github_owner
   })
@@ -53,7 +53,6 @@ resource "github_repository_file" "readme_update" {
 resource "github_repository_file" "workflow_update" {
   repository          = github_repository.new_app_repo.name
   file                = ".github/workflows/build_push_ecr.yml"
-  
   content             = templatefile("${path.module}/templates/workflow_template.tpl", {
     ecr_repo_uri = var.ecr_repository_url
     aws_region   = var.aws_region
