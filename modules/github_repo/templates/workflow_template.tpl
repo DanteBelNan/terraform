@@ -1,3 +1,5 @@
+# modules/github_repo/templates/workflow_template.tpl
+
 name: Multi-Image Build & Push to ECR
 
 on:
@@ -7,6 +9,7 @@ on:
   workflow_dispatch:
 
 env:
+  # Valores inyectados por Terraform. Encerrar en comillas simples para evitar conflictos con YAML.
   ECR_URLS_JSON: '${ecr_urls_json}'
   AWS_REGION: '${aws_region}'
   APP_NAME: '${app_name}'
@@ -23,9 +26,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: $${{ secrets.AWS_ACCESS_KEY_ID }} 
+          aws-secret-access-key: $${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: $${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -33,41 +36,39 @@ jobs:
 
       - name: Build, Tag, Push Images & Create Deploy Compose File
         env:
-          IMAGE_TAG: ${{ github.sha }} 
+          IMAGE_TAG: $${{ github.sha }} 
         run: |
+          # 1. Prepare Variables and JQ
           sudo apt-get install -y jq
-          REGISTRY_URL=${{ steps.login-ecr.outputs.registry }}
+          REGISTRY_URL=$${{ steps.login-ecr.outputs.registry }}
           
-          # Parsear URIs del JSON
+          # Parse URIs from JSON
           NODE_URI=$(echo $ECR_URLS_JSON | jq -r '."node-repo"')
           NGINX_URI=$(echo $ECR_URLS_JSON | jq -r '."nginx-repo"')
           CLI_URI=$(echo $ECR_URLS_JSON | jq -r '."cli-repo"')
           
           # --- BUILD & PUSH IMAGES ---
           
-          # 1. NODE (BACKEND)
           echo "Building Node Image: $NODE_URI"
           docker build -t $NODE_URI:$IMAGE_TAG -f ./docker/Dockerfile.node ./backend
           docker tag $NODE_URI:$IMAGE_TAG $NODE_URI:latest
           docker push $NODE_URI:$IMAGE_TAG
           docker push $NODE_URI:latest
 
-          # 2. NGINX (FRONTEND/PROXY)
           echo "Building Nginx Image: $NGINX_URI"
           docker build -t $NGINX_URI:$IMAGE_TAG -f ./docker/Dockerfile.nginx ./frontend
           docker tag $NGINX_URI:$IMAGE_TAG $NGINX_URI:latest
           docker push $NGINX_URI:$IMAGE_TAG
           docker push $NGINX_URI:latest
           
-          # 3. CLI
           echo "Building CLI Image: $CLI_URI"
           docker build -t $CLI_URI:$IMAGE_TAG -f ./docker/Dockerfile.node ./backend
           docker tag $CLI_URI:$IMAGE_TAG $CLI_URI:latest
           docker push $CLI_URI:$IMAGE_TAG
           docker push $CLI_URI:latest
           
-
-          echo "Creating docker-compose.deploy.yml with URIs of ECR"
+          # --- CREATE docker-compose.deploy.yml (CRITICAL) ---
+          echo "Creating docker-compose.deploy.yml with ECR URIs"
           
           cat <<EOT > docker-compose.deploy.yml
           version: '3.8'
@@ -88,7 +89,7 @@ jobs:
               volumes:
                 - postgres_data:/var/lib/postgresql/data
 
-            # 2. Backend Service (Apunta a ECR - SIN build)
+            # 2. Backend Service (Points to ECR - NO build)
             node:
               image: $NODE_URI:latest
               container_name: node_backend
@@ -103,7 +104,7 @@ jobs:
               volumes:
                 - /app/node_modules 
 
-            # 3. Nginx Service (Apunta a ECR - SIN build)
+            # 3. Nginx Service (Points to ECR - NO build)
             nginx:
               image: $NGINX_URI:latest
               container_name: nginx_proxy
@@ -113,7 +114,7 @@ jobs:
               depends_on:
                 - node
                 
-            # 4. CLI Service (Apunta a ECR - SIN build)
+            # 4. CLI Service (Points to ECR - NO build)
             cli:
               image: $CLI_URI:latest
               container_name: node
@@ -132,6 +133,7 @@ jobs:
             postgres_data:
           EOT
           
+          # --- PUSH DEPLOY FILE ---
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add docker-compose.deploy.yml
