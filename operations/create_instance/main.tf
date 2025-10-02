@@ -1,6 +1,14 @@
+# operations/create_instance/main.tf
+
 # --- AWS Provider Configuration ---
 provider "aws" {
-  region = "us-east-2" 
+  region = "us-east-2"
+}
+
+# --- GitHub Provider Configuration ---
+provider "github" {
+  token = var.github_token
+  owner = var.github_owner
 }
 
 # 1. ECR Definition Module
@@ -10,7 +18,7 @@ module "ecr" {
   repo_names = ["node-repo", "nginx-repo", "cli-repo"] 
 }
 
-# 2. GitHub Module
+# 2. GitHub Repository Module
 module "github_repo" {
   source          = "../../modules/github_repo"
   app_name        = var.app_name
@@ -21,31 +29,34 @@ module "github_repo" {
   repo_template   = var.repo_template
   
   # CI/CD Parameters
-  ecr_repository_urls   = module.ecr.repository_urls 
+  ecr_repository_urls   = module.ecr.ecr_repository_urls
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
 }
 
-# 3. Compute Server Definition (EC2, EIP, SG)
+# 3. Compute Server Definition (Application Server)
 module "compute_server" {
   source          = "../../modules/compute"
   app_name        = var.app_name
   instance_type   = var.instance_type
-  
-  aws_region      = "us-east-2" 
-  
-  build_command   = var.build_command
+  aws_region      = "us-east-2"
 }
 
+# ----------------------------------------------------
+# OUTPUTS 
+# ----------------------------------------------------
+
 output "app_instance_id" {
-  value = module.compute_server.instance_id
+  description = "Application server instance ID."
+  value       = module.compute_server.instance_id
 }
 
 output "app_public_ip" {
-  value = module.compute_server.instance_ip
+  description = "Public IP address."
+  value       = module.compute_server.instance_ip
 }
 
 output "github_repository_url" {
-  description = "URL del repositorio created."
+  description = "URL of the created repository."
   value       = module.github_repo.http_clone_url
 }
