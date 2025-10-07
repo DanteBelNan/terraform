@@ -7,14 +7,8 @@ pipeline {
         // IDs of the credentials created in Jenkins Manager
         AWS_CRED_ID = 'AWS_DEPLOYER_CREDENTIALS' 
         GITHUB_TOKEN_ID = 'GITHUB_PAT_ID'
-
-        // AWS Region for SSM command (Terraform Injected)
         AWS_REGION = 'us-east-2' 
-        
-        // Target Application Configuration (Terraform Injected)
         APP_NAME = '${app_name}'
-        
-        # 🚨 IMPORTANT: Instance ID of your application server (Terraform Injected)
         APP_INSTANCE_ID = '${app_instance_id}' 
         
         // The deployment script to be executed on the target instance via SSM
@@ -23,7 +17,7 @@ pipeline {
             
             # --- 1. SETUP ---
             # Set the AWS Credentials and Region for the AWS CLI session
-            aws configure set default.region \${AWS_REGION}
+            aws configure set default.region us-east-2
             
             # --- Variables inherited from Jenkins Env ---
             # APP_NAME, AWS_REGION, GITHUB_TOKEN (injected via withCredentials)
@@ -35,8 +29,8 @@ pipeline {
             
             # --- 2. AWS ECR Authentication ---
             # Get ECR login details using the instance's IAM role permissions
-            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.\${AWS_REGION}.amazonaws.com
-            AUTH_TOKEN=\$(aws ecr get-login-password --region \${AWS_REGION})
+            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-2.amazonaws.com
+            AUTH_TOKEN=\$(aws ecr get-login-password --region us-east-2)
 
             echo "Authenticating to ECR: \$LOGIN_URL"
             docker login --username AWS --password \${AUTH_TOKEN} \${LOGIN_URL}
