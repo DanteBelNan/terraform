@@ -1,39 +1,46 @@
+// modules/github_repo/templates/jenkinsfile.tpl
+
 // Define the overall structure of the pipeline
 pipeline {
     agent any
     
-    // Global environment variables (read from Jenkins Credential IDs)
+    // Global environment variables
     environment {
-        // IDs of the credentials created in Jenkins Manager
+        // IDs de las credenciales de Jenkins
         AWS_CRED_ID = 'AWS_DEPLOYER_CREDENTIALS' 
         GITHUB_TOKEN_ID = 'GITHUB_PAT_ID'
-        AWS_REGION = 'us-east-2' 
-        APP_NAME = '${app_name}'
-        APP_INSTANCE_ID = '${app_instance_id}' 
         
-        // The deployment script to be executed on the target instance via SSM
+        // Variables Inyectadas por Terraform (sustitución única)
+        AWS_REGION = 'us-east-2'                     // Fijo. No necesita ser inyectado por Terraform.
+        APP_NAME = '${app_name}'                     // <--- Sustitución de Terraform
+        APP_INSTANCE_ID = '${app_instance_id}'       // <--- Sustitución de Terraform
+        
+        // El script de despliegue que se envía vía SSM
         DEPLOY_SCRIPT = """
             #!/bin/bash
             
+            # NOTA: Variables de Jenkins (ej: APP_NAME) son referenciadas como \${VAR}
+            # Variables de Bash internas (ej: AUTH_TOKEN) son referenciadas como \$VAR
+
             # --- 1. SETUP ---
-            # Set the AWS Credentials and Region for the AWS CLI session
-            aws configure set default.region us-east-2
+            aws configure set default.region \${AWS_REGION}
             
-            # --- Variables inherited from Jenkins Env ---
-            # APP_NAME, AWS_REGION, GITHUB_TOKEN (injected via withCredentials)
-            
+            # Variables inyectadas por Terraform para el script Bash
             GITHUB_OWNER="${github_owner}" 
-            REPO_DIR="/home/ubuntu/\$APP_NAME"
+            
+            # Variables de Jenkins
+            REPO_DIR="/home/ubuntu/\${APP_NAME}"
             
             echo "--- 1. Initiating Deployment via SSM ---"
             
             # --- 2. AWS ECR Authentication ---
-            # Get ECR login details using the instance's IAM role permissions
-            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.us-east-2.amazonaws.com
-            AUTH_TOKEN=\$(aws ecr get-login-password --region us-east-2)
+            # LOGIN_URL y AUTH_TOKEN son variables internas de BASH. Usamos \$(...) y solo el escape de Bash \$
+            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.\${AWS_REGION}.amazonaws.com
+            AUTH_TOKEN=\$(aws ecr get-login-password --region \${AWS_REGION})
 
             echo "Authenticating to ECR: \$LOGIN_URL"
-            docker login --username AWS --password \${AUTH_TOKEN} \${LOGIN_URL}
+            # Uso de variables internas de BASH:
+            docker login --username AWS --password \$AUTH_TOKEN \$LOGIN_URL
             
             if [ \$? -ne 0 ]; then
               echo "❌ ERROR: ECR Authentication failed."
@@ -41,7 +48,7 @@ pipeline {
             fi
 
             # --- 3. Clone or Update Repository ---
-            # GITHUB_TOKEN is passed securely as an environment variable by Jenkins
+            # GITHUB_TOKEN es inyectado por withCredentials. Debe ser \${VAR} para que Jenkins lo resuelva.
             GITHUB_AUTH_URL="https://\${GITHUB_OWNER}:\${GITHUB_TOKEN}@github.com/\${GITHUB_OWNER}/\${APP_NAME}"
 
             if [ ! -d "\$REPO_DIR" ]; then
@@ -58,7 +65,6 @@ pipeline {
             echo "Executing Docker Compose Pull and Up..."
             cd "\$REPO_DIR" || exit
 
-            # Run the deployment using the local docker-compose.deploy.yml file
             sudo docker compose -f docker-compose.deploy.yml pull
             sudo docker compose -f docker-compose.deploy.yml up -d
 
@@ -80,16 +86,12 @@ pipeline {
         
         stage('Deployment via AWS SSM') {
             steps {
-                // 1. Get the GitHub PAT from Jenkins credentials and inject it into the pipeline environment
-                // This makes the token available as the GITHUB_TOKEN environment variable in the script
                 withCredentials([string(credentialsId: "${GITHUB_TOKEN_ID}", variable: 'GITHUB_TOKEN')]) {
                     
-                    // 2. Get the AWS keys from Jenkins credentials and set them for the AWS CLI
                     withAWS(credentials: "${AWS_CRED_ID}") {
                         
                         echo "Targeting Instance ID: \${APP_INSTANCE_ID}"
                         
-                        // 3. Execute the deployment script via AWS Systems Manager (SSM)
                         sh """
                             aws ssm send-command \\
                                 --instance-ids \${APP_INSTANCE_ID} \\
