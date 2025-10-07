@@ -9,7 +9,7 @@ pipeline {
         GITHUB_TOKEN_ID = 'GITHUB_PAT_ID'
 
         // AWS Region for SSM command (Terraform Injected)
-        AWS_REGION = '${aws_region}' 
+        AWS_REGION = 'us-east-2' 
         
         // Target Application Configuration (Terraform Injected)
         APP_NAME = '${app_name}'

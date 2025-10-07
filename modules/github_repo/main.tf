@@ -111,12 +111,10 @@ resource "github_repository_file" "deploy_compose_file" {
 # 3.3 Add the Jenkinsfile (Injecting dynamic instance/region/app info)
 resource "github_repository_file" "jenkinsfile_update" {
   repository          = github_repository.new_app_repo.name
-  file                = "Jenkinsfile" # Name must be exactly 'Jenkinsfile'
+  file                = "Jenkinsfile" 
   content             = templatefile("${path.module}/templates/jenkinsfile.tpl", {
-    # Variables required for the Jenkinsfile template
     app_instance_id = var.app_instance_id
     app_name        = var.app_name
-    aws_region      = var.aws_region
     github_owner    = var.github_owner
   })
   commit_message      = "Terraform: Add dynamic Jenkinsfile for CD via AWS SSM"
