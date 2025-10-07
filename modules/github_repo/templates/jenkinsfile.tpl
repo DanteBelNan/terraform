@@ -79,13 +79,13 @@ pipeline {
                     
                     withAWS(credentials: "$${AWS_CRED_ID}") {
                         
-                        echo "Targeting Instance ID: \${APP_INSTANCE_ID}"
+                        echo "Targeting Instance ID: \$${APP_INSTANCE_ID}"
                         
                         sh """
                             aws ssm send-command \\
-                                --instance-ids \${APP_INSTANCE_ID} \\
+                                --instance-ids \$${APP_INSTANCE_ID} \\
                                 --document-name "AWS-RunShellScript" \\
-                                --parameters commands="\${DEPLOY_SCRIPT}" \\
+                                --parameters commands="\$${DEPLOY_SCRIPT}" \\
                                 --comment "CD Deploy: Triggered by Jenkins Pipeline Build \${BUILD_NUMBER}"
                         """
                         
