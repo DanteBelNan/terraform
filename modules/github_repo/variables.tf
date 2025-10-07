@@ -49,3 +49,8 @@ variable "aws_region" {
   type        = string
   default     = "us-east-2"
 }
+
+variable "app_instance_id" {
+  description = "The EC2 Instance ID of the application server (Compute) where deployment occurs."
+  type        = string
+}
