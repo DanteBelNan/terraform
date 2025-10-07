@@ -116,6 +116,7 @@ resource "github_repository_file" "jenkinsfile_update" {
     app_instance_id = var.app_instance_id
     app_name        = var.app_name
     github_owner    = var.github_owner
+    aws_region      = var.aws_region
   })
   commit_message      = "Terraform: Add dynamic Jenkinsfile for CD via AWS SSM"
   overwrite_on_create = true

@@ -9,7 +9,7 @@ pipeline {
         AWS_CRED_ID = 'AWS_DEPLOYER_CREDENTIALS' 
         GITHUB_TOKEN_ID = 'GITHUB_PAT_ID'
         
-        AWS_REGION = 'us-east-2'                     
+        AWS_REGION = '${aws_region}'             
         APP_NAME = '${app_name}'                     
         APP_INSTANCE_ID = '${app_instance_id}'       
         
