@@ -86,7 +86,7 @@ pipeline {
                                 --instance-ids \$${APP_INSTANCE_ID} \\
                                 --document-name "AWS-RunShellScript" \\
                                 --parameters commands="\$${DEPLOY_SCRIPT}" \\
-                                --comment "CD Deploy: Triggered by Jenkins Pipeline Build \${BUILD_NUMBER}"
+                                --comment "CD Deploy: Triggered by Jenkins Pipeline Build \$${BUILD_NUMBER}"
                         """
                         
                         echo "SSM Command Sent. Check AWS console for status."
