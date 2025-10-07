@@ -38,7 +38,7 @@ pipeline {
             fi
 
             # --- 3. Clone or Update Repository ---
-            GITHUB_AUTH_URL="https://${github_owner}:\\\${GITHUB_TOKEN}@github.com/${github_owner}/$${APP_NAME}"
+            GITHUB_AUTH_URL="https://${github_owner}:$"'{GITHUB_TOKEN}'"@github.com/${github_owner}/$${APP_NAME}"
 
             if [ ! -d "\$REPO_DIR" ]; then
               echo "Cloning repository $${APP_NAME} into \$REPO_DIR..."
