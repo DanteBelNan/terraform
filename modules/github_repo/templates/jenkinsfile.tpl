@@ -75,9 +75,9 @@ pipeline {
         
         stage('Deployment via AWS SSM') {
             steps {
-                withCredentials([string(credentialsId: "${GITHUB_TOKEN_ID}", variable: 'GITHUB_TOKEN')]) {
+                withCredentials([string(credentialsId: "$${GITHUB_TOKEN_ID}", variable: 'GITHUB_TOKEN')]) {
                     
-                    withAWS(credentials: "${AWS_CRED_ID}") {
+                    withAWS(credentials: "$${AWS_CRED_ID}") {
                         
                         echo "Targeting Instance ID: \${APP_INSTANCE_ID}"
                         
