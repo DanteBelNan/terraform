@@ -17,17 +17,17 @@ pipeline {
             #!/bin/bash
             
             # --- 1. SETUP ---
-            aws configure set default.region ${AWS_REGION}
+            aws configure set default.region $${AWS_REGION}
             
             GITHUB_OWNER="${github_owner}" 
             
-            REPO_DIR="/home/ubuntu/\${APP_NAME}"
+            REPO_DIR="/home/ubuntu/$${APP_NAME}"
             
             echo "--- 1. Initiating Deployment via SSM ---"
             
             # --- 2. AWS ECR Authentication ---
-            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com
-            AUTH_TOKEN=\$(aws ecr get-login-password --region ${AWS_REGION})
+            LOGIN_URL=\$(aws sts get-caller-identity --query Account --output text).dkr.ecr.$${AWS_REGION}.amazonaws.com
+            AUTH_TOKEN=\$(aws ecr get-login-password --region $${AWS_REGION})
 
             echo "Authenticating to ECR: \$LOGIN_URL"
             docker login --username AWS --password \$AUTH_TOKEN \$LOGIN_URL
@@ -38,10 +38,10 @@ pipeline {
             fi
 
             # --- 3. Clone or Update Repository ---
-            GITHUB_AUTH_URL="https://${GITHUB_OWNER}:\${GITHUB_TOKEN}@github.com/\${GITHUB_OWNER}/\${APP_NAME}"
+            GITHUB_AUTH_URL="https://${github_owner}:\${GITHUB_TOKEN}@github.com/${github_owner}/$${APP_NAME}"
 
             if [ ! -d "\$REPO_DIR" ]; then
-              echo "Cloning repository \${APP_NAME} into \$REPO_DIR..."
+              echo "Cloning repository $${APP_NAME} into \$REPO_DIR..."
               sudo -u ubuntu git clone "\$GITHUB_AUTH_URL" "\$REPO_DIR" 
             else
               echo "Repository exists. Fetching latest changes..."
