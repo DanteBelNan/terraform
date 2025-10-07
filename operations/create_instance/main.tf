@@ -29,7 +29,7 @@ module "github_repo" {
   repo_template   = var.repo_template
   
   # CI/CD Parameters
-  ecr_repository_urls   = module.ecr.ecr_repository_urls
+  ecr_repository_urls   = module.ecr.repository_urls
   aws_access_key_id     = var.aws_access_key_id
   aws_secret_access_key = var.aws_secret_access_key
   app_instance_id       = module.compute_server.instance_id 
