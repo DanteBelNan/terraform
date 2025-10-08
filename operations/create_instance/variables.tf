@@ -64,3 +64,9 @@ variable "jenkins_admin_token" {
   sensitive   = true
 
 }
+
+variable "jenkins_github_credential_id" {
+  description = "The ID of the pre-existing Jenkins credential for the GitHub PAT."
+  type        = string
+  default     = "GITHUB_PAT_ID"
+}

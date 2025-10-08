@@ -51,12 +51,8 @@ module "compute_server" {
   aws_region      = "us-east-2"
 }
 
-resource "jenkins_script" "github_credential_validator" {
-  name   = "validate_github_pat"
-  script = templatefile("${path.module}/templates/validate_credential.groovy.tpl", {
-    credential_id = "GITHUB_PAT_ID"
-  })
-}
+
+# 4.  Jenkins Job Creation 
 
 resource "jenkins_job" "app_pipeline" {
   name     = "${var.app_name}-pipeline"
@@ -64,7 +60,7 @@ resource "jenkins_job" "app_pipeline" {
     app_name      = var.app_name
     repo_url      = module.github_repo.http_clone_url 
     
-    credential_id = resource.jenkins_script.github_credential_validator.result
+    credential_id = var.jenkins_github_credential_id
     
     branch_name   = "*/main"
   })
