@@ -10,7 +10,7 @@ terraform {
     }
     jenkins = {
       source= "taiidani/jenkins"
-      version = "~> 2.0"
+      version = "~> 0.11"
     }
   }
 
