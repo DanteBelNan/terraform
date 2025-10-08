@@ -64,7 +64,7 @@ resource "jenkins_job" "app_pipeline" {
     app_name      = var.app_name
     repo_url      = module.github_repo.http_clone_url 
     
-    credential_id = data.jenkins_credential_secret_text.github_pat.name 
+    credential_id = data.jenkins_script.github_credential_validator.result
     
     branch_name   = "*/main"
   })
