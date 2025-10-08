@@ -46,15 +46,13 @@ resource "github_repository" "new_app_repo" {
   auto_init    = true 
 }
 
-# 2.2 GitHub Actions Secrets
-# AWS Access Key ID
+# 2.2 GitHub Actions Secrets (Kept in case they are needed for other purposes)
 resource "github_actions_secret" "aws_key_id" {
   repository      = github_repository.new_app_repo.name
   secret_name     = "AWS_ACCESS_KEY_ID"
   plaintext_value = var.aws_access_key_id
 }
 
-# AWS Secret Access Key
 resource "github_actions_secret" "aws_secret_key" {
   repository      = github_repository.new_app_repo.name
   secret_name     = "AWS_SECRET_ACCESS_KEY"
@@ -66,24 +64,7 @@ resource "github_actions_secret" "aws_secret_key" {
 # 3. REPOSITORY FILES
 # ----------------------------------------------------
 
-# 3.1 Update CI Workflow File (Remains unchanged for now)
-resource "github_repository_file" "workflow_update" {
-  repository          = github_repository.new_app_repo.name
-  file                = ".github/workflows/build_push_ecr.yml"
-  content             = templatefile("${path.module}/templates/workflow_template.tpl", {
-    ecr_urls_json  = local.ecr_urls_json
-    aws_region     = var.aws_region
-    app_name       = var.app_name
-  })
-  commit_message      = "Terraform: Update ECR URIs and Region for CI/CD"
-  overwrite_on_create = true 
-  depends_on          = [
-    github_repository.new_app_repo, 
-    github_actions_secret.aws_key_id
-  ]
-}
-
-# 3.2 Add the docker-compose deployment file (Remains unchanged)
+# 3.1 Add the docker-compose deployment file
 resource "github_repository_file" "deploy_compose_file" {
   repository          = github_repository.new_app_repo.name
   file                = "docker-compose.deploy.yml"
@@ -101,12 +82,10 @@ resource "github_repository_file" "deploy_compose_file" {
   })
   commit_message      = "Terraform: Add dynamic docker-compose.deploy.yml"
   overwrite_on_create = true
-  depends_on          = [
-    github_repository.new_app_repo
-  ]
+  depends_on          = [github_repository.new_app_repo]
 }
 
-# 3.3 Add the deployment script (deploy.sh) to the repository
+# 3.2 Add the deployment script (deploy.sh)
 resource "github_repository_file" "deploy_script" {
   repository          = github_repository.new_app_repo.name
   file                = "deploy.sh"
@@ -116,17 +95,23 @@ resource "github_repository_file" "deploy_script" {
   depends_on          = [github_repository.new_app_repo]
 }
 
-# 3.4 Add the new, simplified Jenkinsfile
+# 3.3 Add the Jenkinsfile with ECR Push capabilities
 resource "github_repository_file" "jenkinsfile_update" {
   repository          = github_repository.new_app_repo.name
   file                = "Jenkinsfile" 
   content             = templatefile("${path.module}/templates/jenkinsfile.tpl", {
+    # Existing variables
     app_instance_id = var.app_instance_id
     app_name        = var.app_name
     github_owner    = var.github_owner
     aws_region      = var.aws_region
+
+    # Pass the full ECR URIs to the template
+    ecr_node_uri    = jsondecode(local.ecr_urls_json)["node-repo"]
+    ecr_nginx_uri   = jsondecode(local.ecr_urls_json)["nginx-repo"]
+    ecr_cli_uri     = jsondecode(local.ecr_urls_json)["cli-repo"]
   })
-  commit_message      = "Terraform: Add simplified Jenkinsfile for CD"
+  commit_message      = "Terraform: Update Jenkinsfile to handle ECR push"
   overwrite_on_create = true
   depends_on          = [
     github_repository.new_app_repo, 
@@ -134,7 +119,63 @@ resource "github_repository_file" "jenkinsfile_update" {
   ]
 }
 
+# ----------------------------------------------------
+# OUTPUTS & VARIABLES
+# ----------------------------------------------------
+
 output "http_clone_url" {
   description = "The HTTPS URL to clone the application repository."
   value       = github_repository.new_app_repo.http_clone_url 
+}
+
+# --- GitHub Configuration Variables ---
+
+variable "app_name" {
+  description = "Application name used for naming the new repository."
+  type        = string
+}
+
+variable "github_token" {
+  description = "GitHub Personal Access Token (PAT) with 'repo' and 'workflow' scopes."
+  type        = string
+  sensitive   = true 
+}
+
+variable "github_owner" {
+  description = "The GitHub organization or user where the repository will be created."
+  type        = string
+}
+
+variable "repo_template" {
+  description = "Full name of the template repository (owner/repo-name)."
+  type        = string
+  validation {
+    condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template)
+    error_message = "The value for repo_template must be one of the valid options: 'DanteBelNan/node_template' or 'DanteBelNan/html_template'."
+  }
+}
+
+# --- CI/CD Configuration Variables (Secrets and ECR) ---
+
+variable "aws_access_key_id" {
+  description = "AWS Access Key ID for configuring GitHub Secrets."
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS Secret Access Key for configuring GitHub Secrets."
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_region" {
+  description = "AWS Region, used for injection into the workflow."
+  type        = string
+  default     = "us-east-2"
+}
+
+variable "app_instance_id" {
+  description = "The EC2 Instance ID of the application server (Compute) where deployment occurs."
+  type        = string
 }

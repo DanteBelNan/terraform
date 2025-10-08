@@ -16,6 +16,40 @@ pipeline {
     }
 
     stages {
+        stage('Build & Push to ECR') {
+            steps {
+                checkout scm
+                withAWS(credentials: AWS_CRED_ID) {
+                    
+                    echo "🚀 Starting Docker build and push process..."
+                    
+                    sh 'aws ecr get-login-password --region $${env.AWS_REGION} | docker login --username AWS --password-stdin $${env.ECR_NODE_URI}'
+
+                    def imageTag = env.GIT_COMMIT.take(12)
+
+                    echo "--- Building node image ---"
+                    sh "docker build -t $${env.ECR_NODE_URI}:$${imageTag} -f ./docker/Dockerfile.node ./backend"
+                    sh "docker tag $${env.ECR_NODE_URI}:$${imageTag} $${env.ECR_NODE_URI}:latest"
+                    sh "docker push $${env.ECR_NODE_URI}:$${imageTag}"
+                    sh "docker push $${env.ECR_NODE_URI}:latest"
+                    
+                    echo "--- Building nginx image ---"
+                    sh "docker build -t $${env.ECR_NGINX_URI}:$${imageTag} -f ./docker/Dockerfile.nginx ./frontend"
+                    sh "docker tag $${env.ECR_NGINX_URI}:$${imageTag} $${env.ECR_NGINX_URI}:latest"
+                    sh "docker push $${env.ECR_NGINX_URI}:$${imageTag}"
+                    sh "docker push $${env.ECR_NGINX_URI}:latest"
+
+                    echo "--- Building cli image ---"
+                    sh "docker build -t $${env.ECR_CLI_URI}:$${imageTag} -f ./docker/Dockerfile.node ./backend"
+                    sh "docker tag $${env.ECR_CLI_URI}:$${imageTag} $${env.ECR_CLI_URI}:latest"
+                    sh "docker push $${env.ECR_CLI_URI}:$${imageTag}"
+                    sh "docker push $${env.ECR_CLI_URI}:latest"
+
+                    echo "✅ All images pushed to ECR."
+                }
+            }
+        }
+
         stage('Deploy to EC2') {
             steps {
                 withCredentials([string(credentialsId: GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
