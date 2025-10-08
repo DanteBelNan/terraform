@@ -51,8 +51,11 @@ module "compute_server" {
   aws_region      = "us-east-2"
 }
 
-data "jenkins_credential_secret_text" "github_pat" {
-  name = "GITHUB_PAT_ID"
+data "jenkins_script" "github_credential_validator" {
+  name = "validate_github_pat"
+  script = templatefile("${path.module}/templates/validate_credential.groovy.tpl", {
+    credential_id = "GITHUB_PAT_ID"
+  })
 }
 
 resource "jenkins_job" "app_pipeline" {
