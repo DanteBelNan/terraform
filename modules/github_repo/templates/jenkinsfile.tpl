@@ -1,10 +1,14 @@
+// templates/jenkinsfile.tpl
+
 pipeline {
     agent any
     
     environment {
+        // Jenkins credential IDs
         AWS_CRED_ID     = 'AWS_DEPLOYER_CREDENTIALS' 
         GITHUB_TOKEN_ID = 'GITHUB_PAT_ID'
         
+        // Variables injected by Terraform
         AWS_REGION      = '${aws_region}'             
         APP_NAME        = '${app_name}'                     
         APP_INSTANCE_ID = '${app_instance_id}'       
@@ -17,21 +21,22 @@ pipeline {
                 withCredentials([string(credentialsId: GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
                     withAWS(credentials: AWS_CRED_ID) {
                         
-                        echo "🚀 Triggering deployment for ${APP_NAME} on instance ${APP_INSTANCE_ID}..."
+                        echo "🚀 Triggering deployment for ${env.APP_NAME} on instance ${env.APP_INSTANCE_ID}..."
                         
                         def remoteScript = """
                             # Exit on error
                             set -e
                             
-                            # Define repository directory
-                            export REPO_DIR="/home/ubuntu/${APP_NAME}"
+                            # Define repository directory using the Jenkins environment variable
+                            export REPO_DIR="/home/ubuntu/$${env.APP_NAME}"
                             
                             echo "--- 1. Updating repository ---"
                             cd \$REPO_DIR || exit 1
                             
                             # Temporarily configure git to use the token for the pull command
+                            # GITHUB_TOKEN is a local Groovy var, env.GITHUB_OWNER is a Jenkins env var
                             git config --global credential.helper 'store'
-                            echo "https://${GITHUB_OWNER}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+                            echo "https://$${env.GITHUB_OWNER}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
                             
                             git pull
                             
@@ -45,10 +50,10 @@ pipeline {
                         
                         sh """
                             aws ssm send-command \\
-                                --instance-ids "${APP_INSTANCE_ID}" \\
+                                --instance-ids "${env.APP_INSTANCE_ID}" \\
                                 --document-name "AWS-RunShellScript" \\
                                 --parameters commands="'''${remoteScript}'''" \\
-                                --comment "Jenkins CD for ${APP_NAME}, Build ${BUILD_NUMBER}"
+                                --comment "Jenkins CD for ${env.APP_NAME}, Build ${BUILD_NUMBER}"
                         """
                         
                         echo "✅ SSM Command sent. Check AWS Console for execution status."
