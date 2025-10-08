@@ -51,8 +51,8 @@ module "compute_server" {
   aws_region      = "us-east-2"
 }
 
-data "jenkins_script" "github_credential_validator" {
-  name = "validate_github_pat"
+resource "jenkins_script" "github_credential_validator" {
+  name   = "validate_github_pat"
   script = templatefile("${path.module}/templates/validate_credential.groovy.tpl", {
     credential_id = "GITHUB_PAT_ID"
   })
@@ -64,13 +64,10 @@ resource "jenkins_job" "app_pipeline" {
     app_name      = var.app_name
     repo_url      = module.github_repo.http_clone_url 
     
-    credential_id = data.jenkins_script.github_credential_validator.result
+    credential_id = resource.jenkins_script.github_credential_validator.result
     
     branch_name   = "*/main"
   })
-
-  # We no longer need depends_on because we are not creating the credential
-  # depends_on = [jenkins_credential_secret_text.github_pat] # You can remove this line
 }
 
 
