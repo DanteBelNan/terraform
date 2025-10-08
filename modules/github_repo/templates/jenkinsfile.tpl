@@ -21,8 +21,10 @@ pipeline {
                 withCredentials([string(credentialsId: GITHUB_TOKEN_ID, variable: 'GITHUB_TOKEN')]) {
                     withAWS(credentials: AWS_CRED_ID) {
                         
-                        echo "🚀 Triggering deployment for ${env.APP_NAME} on instance ${env.APP_INSTANCE_ID}..."
+                        // All Jenkins variables are escaped with '$$' to prevent Terraform from processing them
+                        echo "🚀 Triggering deployment for $${env.APP_NAME} on instance $${env.APP_INSTANCE_ID}..."
                         
+                        // This script will be executed ON the EC2 instance via SSM
                         def remoteScript = """
                             # Exit on error
                             set -e
@@ -48,12 +50,13 @@ pipeline {
                             bash \$REPO_DIR/deploy.sh
                         """
                         
+                        // Send the script to the EC2 instance for execution
                         sh """
                             aws ssm send-command \\
-                                --instance-ids "${env.APP_INSTANCE_ID}" \\
+                                --instance-ids "$${env.APP_INSTANCE_ID}" \\
                                 --document-name "AWS-RunShellScript" \\
                                 --parameters commands="'''${remoteScript}'''" \\
-                                --comment "Jenkins CD for ${env.APP_NAME}, Build ${BUILD_NUMBER}"
+                                --comment "Jenkins CD for $${env.APP_NAME}, Build $${BUILD_NUMBER}"
                         """
                         
                         echo "✅ SSM Command sent. Check AWS Console for execution status."
