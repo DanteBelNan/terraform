@@ -38,7 +38,7 @@ pipeline {
                             # Temporarily configure git to use the token for the pull command
                             # GITHUB_TOKEN is a local Groovy var, env.GITHUB_OWNER is a Jenkins env var
                             git config --global credential.helper 'store'
-                            echo "https://$${env.GITHUB_OWNER}:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+                            echo "https://$${env.GITHUB_OWNER}:$${GITHUB_TOKEN}@github.com" > ~/.git-credentials
                             
                             git pull
                             
