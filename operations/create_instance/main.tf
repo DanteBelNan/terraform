@@ -11,6 +11,14 @@ provider "github" {
   owner = var.github_owner
 }
 
+# --- Jenkins Provider Configuration ---
+provider "jenkins" {
+  server_url = "http://${module.jenkins_server.public_ip}:8080/"
+  username   = var.jenkins_admin_user
+  password   = var.jenkins_admin_token # This should be an API Token, not a password
+}
+
+
 # 1. ECR Definition Module
 module "ecr" {
   source   = "../../modules/ecr"
@@ -41,6 +49,29 @@ module "compute_server" {
   app_name        = var.app_name
   instance_type   = var.instance_type
   aws_region      = "us-east-2"
+}
+
+# 4. Jenkins Credentials Management 
+resource "jenkins_credential_secret_text" "github_pat" {
+  name        = "GITHUB_PAT_ID" 
+  description = "GitHub Personal Access Token for cloning repositories"
+  secret      = var.github_token 
+}
+
+resource "jenkins_job" "app_pipeline" {
+  name     = "${var.app_name}-pipeline"
+  template = templatefile("${path.module}/templates/job_template.xml.tpl", {
+    app_name      = var.app_name
+
+    repo_url      = module.github_repo.http_clone_url 
+
+    credential_id = jenkins_credential_secret_text.github_pat.name 
+    branch_name   = "*/main"
+  })
+
+  depends_on = [
+    jenkins_credential_secret_text.github_pat
+  ]
 }
 
 # ----------------------------------------------------

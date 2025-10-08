@@ -8,6 +8,10 @@ terraform {
       source  = "integrations/github"
       version = "~> 6.0"
     }
+    jenkins = {
+      source= "taiidani/jenkins"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {

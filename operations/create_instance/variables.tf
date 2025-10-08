@@ -51,3 +51,16 @@ variable "aws_secret_access_key" {
   type        = string
   sensitive   = true 
 }
+
+variable "jenkins_admin_user" {
+  description = "The admin username for the Jenkins server."
+  type        = string
+  default     = "admin"
+}
+
+variable "jenkins_admin_token" {
+  description = "The API Token for the Jenkins admin user."
+  type        = string
+  sensitive   = true
+
+}
