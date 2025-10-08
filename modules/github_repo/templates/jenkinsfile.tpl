@@ -73,7 +73,7 @@ pipeline {
                             sudo docker compose -f docker-compose.deploy.yml up -d
 
                             echo "✅ SUCCESS: Application deployed to Compute Server."
-                        '''.replace('${token_placeholder}', GITHUB_TOKEN) // Replace the placeholder with the actual token
+                        '''.replace('$${token_placeholder}', GITHUB_TOKEN) 
 
                         echo "Targeting Instance ID: ${APP_INSTANCE_ID}"
                         
