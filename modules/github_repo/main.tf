@@ -120,62 +120,10 @@ resource "github_repository_file" "jenkinsfile_update" {
 }
 
 # ----------------------------------------------------
-# OUTPUTS & VARIABLES
+# OUTPUT
 # ----------------------------------------------------
 
 output "http_clone_url" {
   description = "The HTTPS URL to clone the application repository."
   value       = github_repository.new_app_repo.http_clone_url 
-}
-
-# --- GitHub Configuration Variables ---
-
-variable "app_name" {
-  description = "Application name used for naming the new repository."
-  type        = string
-}
-
-variable "github_token" {
-  description = "GitHub Personal Access Token (PAT) with 'repo' and 'workflow' scopes."
-  type        = string
-  sensitive   = true 
-}
-
-variable "github_owner" {
-  description = "The GitHub organization or user where the repository will be created."
-  type        = string
-}
-
-variable "repo_template" {
-  description = "Full name of the template repository (owner/repo-name)."
-  type        = string
-  validation {
-    condition     = contains(["DanteBelNan/node_template", "DanteBelNan/html_template"], var.repo_template)
-    error_message = "The value for repo_template must be one of the valid options: 'DanteBelNan/node_template' or 'DanteBelNan/html_template'."
-  }
-}
-
-# --- CI/CD Configuration Variables (Secrets and ECR) ---
-
-variable "aws_access_key_id" {
-  description = "AWS Access Key ID for configuring GitHub Secrets."
-  type        = string
-  sensitive   = true
-}
-
-variable "aws_secret_access_key" {
-  description = "AWS Secret Access Key for configuring GitHub Secrets."
-  type        = string
-  sensitive   = true
-}
-
-variable "aws_region" {
-  description = "AWS Region, used for injection into the workflow."
-  type        = string
-  default     = "us-east-2"
-}
-
-variable "app_instance_id" {
-  description = "The EC2 Instance ID of the application server (Compute) where deployment occurs."
-  type        = string
 }
