@@ -13,7 +13,7 @@ provider "github" {
 
 # --- Jenkins Provider Configuration ---
 provider "jenkins" {
-  server_url = "http://${module.jenkins_server.public_ip}:8080/"
+  server_url = "http://13.58.18.54:8080/" #Hardocding ip of my jenkins, bad practice but i can make it better next time :p
   username   = var.jenkins_admin_user
   password   = var.jenkins_admin_token # This should be an API Token, not a password
 }
