@@ -51,28 +51,25 @@ module "compute_server" {
   aws_region      = "us-east-2"
 }
 
-# 4. Jenkins Credentials Management 
-resource "jenkins_credential_secret_text" "github_pat" {
-  name        = "GITHUB_PAT_ID" 
-  description = "GitHub Personal Access Token for cloning repositories"
-  secret      = var.github_token 
+data "jenkins_credential_secret_text" "github_pat" {
+  name = "GITHUB_PAT_ID"
 }
 
 resource "jenkins_job" "app_pipeline" {
   name     = "${var.app_name}-pipeline"
   template = templatefile("${path.module}/templates/job_template.xml.tpl", {
     app_name      = var.app_name
-
     repo_url      = module.github_repo.http_clone_url 
-
-    credential_id = jenkins_credential_secret_text.github_pat.name 
+    
+    credential_id = data.jenkins_credential_secret_text.github_pat.name 
+    
     branch_name   = "*/main"
   })
 
-  depends_on = [
-    jenkins_credential_secret_text.github_pat
-  ]
+  # We no longer need depends_on because we are not creating the credential
+  # depends_on = [jenkins_credential_secret_text.github_pat] # You can remove this line
 }
+
 
 # ----------------------------------------------------
 # OUTPUTS 
