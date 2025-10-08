@@ -79,7 +79,7 @@ pipeline {
                                 aws ssm send-command \\
                                     --instance-ids "$${env.APP_INSTANCE_ID}" \\
                                     --document-name "AWS-RunShellScript" \\
-                                    --parameters commands="'''${remoteScript}'''" \\
+                                    --parameters commands="'''$${remoteScript}'''" \\
                                     --comment "Jenkins CD for $${env.APP_NAME}, Build $${BUILD_NUMBER}"
                             """
                             
